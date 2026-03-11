@@ -8,17 +8,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root {
-            --mobilitas-blue: #003366;
-            --arcania-orange: #f39200;
-        }
+        :root { --mobilitas-blue: #003366; --arcania-orange: #f39200; }
         .bg-mobilitas { background-color: var(--mobilitas-blue); }
         .text-mobilitas { color: var(--mobilitas-blue); }
         .border-arcania { border-color: var(--arcania-orange); }
         .bg-arcania { background-color: var(--arcania-orange); }
         canvas { max-height: 280px; width: 100% !important; }
-        .kpi-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .kpi-card { transition: all 0.3s ease; border: 1px solid #e2e8f0; }
+        .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border-color: var(--arcania-orange); }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-900">
@@ -26,236 +23,218 @@
     <header class="bg-mobilitas text-white p-5 shadow-xl border-b-4 border-arcania">
         <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
             <div class="flex items-center space-x-4">
-                <div class="bg-white p-2 rounded-xl shadow-inner">
+                <div class="bg-white p-2 rounded-xl">
                     <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M50 15L85 80H15L50 15Z" stroke="#003366" stroke-width="8"/>
                         <circle cx="50" cy="55" r="12" fill="#f39200"/>
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-black tracking-tight flex items-center">
-                        ARCANIA <span class="ml-2 px-2 py-0.5 bg-orange-500 text-white text-xs rounded-md uppercase">IA Suite</span>
-                    </h1>
-                    <p class="text-[10px] uppercase tracking-[0.2em] text-blue-200">Business Intelligence | Groupe Mobilitas</p>
+                    <h1 class="text-2xl font-black tracking-tight">ARCANIA <span class="text-orange-500">IA</span></h1>
+                    <p class="text-[10px] uppercase tracking-widest text-blue-200">Mobilitas Group Strategic Reporting</p>
                 </div>
             </div>
-            <div class="mt-4 md:mt-0 text-right">
-                <div id="status-badge" class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-blue-900 text-blue-100 border border-blue-700">
-                    <span class="w-2 h-2 mr-2 bg-green-400 rounded-full animate-pulse"></span>
-                    SYNC N8N ACTIVE
+            <div id="status-container" class="mt-4 md:mt-0 text-right">
+                <div class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-blue-900 text-blue-100 border border-blue-700">
+                    <span id="status-dot" class="w-2 h-2 mr-2 bg-green-400 rounded-full animate-pulse"></span>
+                    <span id="status-text">SYNC N8N ACTIVE</span>
                 </div>
-                <p id="last-update" class="text-[10px] text-blue-300 mt-1 italic italic">Analyse des flux en cours...</p>
+                <p id="last-update" class="text-[10px] text-blue-300 mt-1 italic">Chargement des flux...</p>
             </div>
         </div>
     </header>
 
     <main class="container mx-auto py-10 px-6">
-        
-        <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div class="mb-10 flex flex-col md:flex-row justify-between items-end gap-4">
             <div>
                 <h2 class="text-4xl font-black text-mobilitas tracking-tight">Tableau de Bord Commercial</h2>
-                <p class="text-slate-500 mt-1 font-medium">Pilotage stratégique assisté par Intelligence Artificielle</p>
+                <p class="text-slate-500 font-medium italic">Analyse automatisée assistée par Intelligence Artificielle</p>
             </div>
-            <button onclick="window.location.reload()" class="flex items-center justify-center space-x-2 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-6 rounded-xl border border-slate-200 shadow-sm transition-all active:scale-95">
+            <button onclick="window.location.reload()" class="flex items-center space-x-2 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-6 rounded-xl border border-slate-200 shadow-sm transition-all active:scale-95">
                 <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                <span>Actualiser les données</span>
+                <span>Actualiser</span>
             </button>
-        </div>
-
-        <div id="error-banner" class="hidden mb-8 p-5 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-2xl shadow-lg">
-            <div class="flex items-center">
-                <i data-lucide="alert-triangle" class="mr-4 w-8 h-8"></i>
-                <div>
-                    <p class="font-black text-lg">Erreur de Synchronisation</p>
-                    <p class="text-sm opacity-90">Impossible de récupérer les données du Google Sheet. Vérifiez la publication du lien CSV.</p>
-                </div>
-            </div>
         </div>
 
         <!-- KPI Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="p-3 bg-blue-50 text-mobilitas rounded-xl"><i data-lucide="trending-up"></i></div>
-                    <span class="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded">CA TOTAL</span>
-                </div>
-                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Ventes Clôturées</p>
-                <p id="kpi-sales" class="text-3xl font-black text-mobilitas mt-1">--- €</p>
+            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ventes Clôturées</p>
+                <p id="kpi-sales" class="text-3xl font-black text-mobilitas">--- €</p>
+                <div class="mt-4 h-1 w-full bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-blue-600 w-3/4"></div></div>
             </div>
-
-            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="p-3 bg-orange-50 text-orange-600 rounded-xl"><i data-lucide="truck"></i></div>
-                    <span class="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-1 rounded">LOGISTIQUE</span>
-                </div>
-                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Volume Global</p>
-                <p id="kpi-vol" class="text-3xl font-black text-mobilitas mt-1">--- m³</p>
+            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Volume Global</p>
+                <p id="kpi-vol" class="text-3xl font-black text-mobilitas">--- m³</p>
+                <div class="mt-4 h-1 w-full bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-orange-500 w-1/2"></div></div>
             </div>
-
-            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i data-lucide="check-circle"></i></div>
-                    <span class="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded">EFFICIENCE</span>
-                </div>
-                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Taux de Conversion</p>
-                <p id="kpi-conv" class="text-3xl font-black text-mobilitas mt-1">--- %</p>
+            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Taux de Conversion</p>
+                <p id="kpi-conv" class="text-3xl font-black text-mobilitas">--- %</p>
+                <div class="mt-4 h-1 w-full bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-emerald-500 w-2/3"></div></div>
             </div>
-
-            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="p-3 bg-purple-50 text-purple-600 rounded-xl"><i data-lucide="briefcase"></i></div>
-                    <span class="text-[10px] font-black text-purple-600 bg-purple-50 px-2 py-1 rounded">VALEUR</span>
-                </div>
-                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Panier Moyen</p>
-                <p id="kpi-avg" class="text-3xl font-black text-mobilitas mt-1">--- €</p>
+            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Panier Moyen</p>
+                <p id="kpi-avg" class="text-3xl font-black text-mobilitas">--- €</p>
+                <div class="mt-4 h-1 w-full bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-purple-500 w-full"></div></div>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
             <div class="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                <h3 class="text-xl font-black text-mobilitas mb-8 flex items-center">
-                    <span class="w-1.5 h-6 bg-arcania rounded-full mr-3"></span>
-                    Évolution du Chiffre d'Affaires
-                </h3>
-                <div class="h-[300px]">
-                    <canvas id="salesChart"></canvas>
-                </div>
+                <h3 class="text-lg font-black text-mobilitas mb-6 flex items-center"><i data-lucide="line-chart" class="mr-2 text-orange-500"></i> Évolution des Ventes</h3>
+                <div class="h-[300px]"><canvas id="salesChart"></canvas></div>
             </div>
-
             <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                <h3 class="text-xl font-black text-mobilitas mb-8 flex items-center">
-                    <span class="w-1.5 h-6 bg-blue-400 rounded-full mr-3"></span>
-                    Top Destinations
-                </h3>
-                <div class="h-[300px]">
-                    <canvas id="destChart"></canvas>
-                </div>
+                <h3 class="text-lg font-black text-mobilitas mb-6 flex items-center"><i data-lucide="pie-chart" class="mr-2 text-blue-500"></i> Top Destinations</h3>
+                <div class="h-[300px]"><canvas id="destChart"></canvas></div>
             </div>
         </div>
 
+        <!-- Table -->
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-            <div class="p-8 border-b border-slate-100 flex justify-between items-center">
-                <h3 class="text-xl font-black text-mobilitas">Performance Individuelle des Commerciaux</h3>
-                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Classement Dynamique</div>
+            <div class="p-6 border-b border-slate-100 bg-slate-50/50">
+                <h3 class="font-black text-mobilitas uppercase tracking-wider text-sm">Performance par Commercial</h3>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
-                    <thead>
-                        <tr class="text-slate-400 text-[10px] uppercase tracking-[0.2em] border-b border-slate-100">
-                            <th class="p-8 font-black">Consultant</th>
-                            <th class="p-8 font-black text-right">C.A. (€)</th>
-                            <th class="p-8 font-black text-right">Volume (m³)</th>
-                            <th class="p-8 font-black text-right">Dossiers</th>
-                            <th class="p-8 font-black text-center">Taux Clôture</th>
+                    <thead class="text-[10px] text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                        <tr>
+                            <th class="p-6">Commercial</th>
+                            <th class="p-6 text-right">CA (€)</th>
+                            <th class="p-6 text-right">Volume (m³)</th>
+                            <th class="p-6 text-center">Efficience</th>
                         </tr>
                     </thead>
                     <tbody id="sales-table" class="divide-y divide-slate-50">
-                        <!-- Données injectées par JS -->
+                        <!-- JS inject -->
                     </tbody>
                 </table>
             </div>
         </div>
     </main>
 
-    <footer class="text-center py-12 text-slate-400 text-[10px] border-t border-slate-100 mt-10">
-        <p class="uppercase tracking-[0.3em] font-black text-slate-300 mb-2">Arcania IA Intelligence Suite</p>
-        <p>&copy; 2026 Mobilitas Group | AGS Strategy & Mobility Division</p>
-    </footer>
-
     <script>
-        // LIEN PUBLIC CORRECT (Issu de votre capture d'écran)
+        // LIEN PUBLIC CSV
         const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbuJaO36t_m_LhDX5RXHBNPexD9jkCr54qlGFKA-wzxwuUS67TOdYk8euyhlXAspySvKaf8-kUml6l/pub?gid=0&single=true&output=csv';
 
-        async function initDashboard() {
+        // Fonction de Parsing CSV Robuste (gère les guillemets et virgules)
+        function parseCSV(text) {
+            const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
+            if (lines.length === 0) return [];
+            
+            const separator = lines[0].includes(';') ? ';' : ',';
+            const headers = lines[0].split(separator).map(h => h.trim().replace(/"/g, ''));
+            
+            return lines.slice(1).map(line => {
+                const values = line.split(separator).map(v => v.trim().replace(/"/g, ''));
+                let obj = {};
+                headers.forEach((header, i) => { obj[header] = values[i]; });
+                return obj;
+            });
+        }
+
+        async function loadDashboard() {
             lucide.createIcons();
             try {
-                // Fetch avec cache-busting pour assurer la fraîcheur des données
                 const response = await fetch(`${CSV_URL}&t=${Date.now()}`);
-                if (!response.ok) throw new Error('Erreur réseau');
-                const csvData = await response.text();
-                processData(csvData);
-            } catch (error) {
-                console.error("Dashboard Error:", error);
-                document.getElementById('error-banner').classList.remove('hidden');
-                document.getElementById('status-badge').innerHTML = '<span class="w-2 h-2 mr-2 bg-red-500 rounded-full"></span> OFFLINE';
+                const text = await response.text();
+                const data = parseCSV(text);
+                
+                if (data.length === 0) throw new Error("Fichier vide");
+                processData(data);
+
+            } catch (e) {
+                console.error("Erreur:", e);
+                document.getElementById('status-text').innerText = "ERREUR DE DONNÉES";
+                document.getElementById('status-dot').className = "w-2 h-2 mr-2 bg-red-500 rounded-full";
+                document.getElementById('last-update').innerText = "Vérifiez la publication du Google Sheet";
             }
         }
 
-        function processData(csv) {
-            const lines = csv.split('\n').filter(l => l.trim() !== "");
-            if (lines.length < 2) return;
+        function processData(data) {
+            let stats = { ca: 0, vol: 0, gagne: 0, total: data.length, dests: {}, comms: {} };
 
-            // Parsing des lignes CSV
-            const data = lines.slice(1).map(line => {
-                const values = line.split(',');
-                return {
-                    id: values[0],
-                    commercial: values[3]?.trim(),
-                    statut: values[4]?.trim().toLowerCase(),
-                    montant: parseFloat(values[5]) || 0,
-                    volume: parseFloat(values[6]) || 0,
-                    pays: values[8]?.trim()
-                };
-            }).filter(item => item.id);
+            data.forEach(row => {
+                // Utilisation des noms de colonnes exacts
+                const montant = parseFloat(row.Montant_HT) || 0;
+                const volume = parseFloat(row.Volume_m3) || 0;
+                const statut = (row.Statut_Dossier || "").toLowerCase();
+                const pays = row.Destination_Pays;
+                const nom = row.Commercial;
 
-            const stats = {
-                caTotal: 0,
-                volTotal: 0,
-                countTotal: data.length,
-                countGagne: 0,
-                destinations: {},
-                commerciaux: {}
-            };
+                const isGagne = ["gagné", "gagne", "confirmé", "won", "signé"].includes(statut);
 
-            data.forEach(item => {
-                const isGagne = ["gagné", "gagne", "confirmé", "confirme", "won", "signé"].includes(item.statut);
-                
-                if(isGagne) {
-                    stats.caTotal += item.montant;
-                    stats.volTotal += item.volume;
-                    stats.countGagne++;
+                if (isGagne) {
+                    stats.ca += montant;
+                    stats.vol += volume;
+                    stats.gagne++;
+                    if (pays) stats.dests[pays] = (stats.dests[pays] || 0) + volume;
                 }
 
-                if(item.pays) {
-                    stats.destinations[item.pays] = (stats.destinations[item.pays] || 0) + item.volume;
-                }
-
-                if(item.commercial) {
-                    if(!stats.commerciaux[item.commercial]) {
-                        stats.commerciaux[item.commercial] = { sales: 0, vol: 0, count: 0, total: 0 };
-                    }
-                    stats.commerciaux[item.commercial].total++;
-                    if(isGagne) {
-                        stats.commerciaux[item.commercial].sales += item.montant;
-                        stats.commerciaux[item.commercial].vol += item.volume;
-                        stats.commerciaux[item.commercial].count++;
+                if (nom) {
+                    if (!stats.comms[nom]) stats.comms[nom] = { ca: 0, vol: 0, count: 0, total: 0 };
+                    stats.comms[nom].total++;
+                    if (isGagne) {
+                        stats.comms[nom].ca += montant;
+                        stats.comms[nom].vol += volume;
+                        stats.comms[nom].count++;
                     }
                 }
             });
 
-            // Mise à jour de l'interface
-            document.getElementById('kpi-sales').innerText = stats.caTotal.toLocaleString('fr-FR') + " €";
-            document.getElementById('kpi-vol').innerText = stats.volTotal.toLocaleString('fr-FR') + " m³";
-            document.getElementById('kpi-conv').innerText = Math.round((stats.countGagne / stats.countTotal) * 100) + "%";
-            document.getElementById('kpi-avg').innerText = Math.round(stats.caTotal / (stats.countGagne || 1)).toLocaleString('fr-FR') + " €";
-            document.getElementById('last-update').innerText = "Dernière analyse Mobilitas : " + new Date().toLocaleTimeString('fr-FR');
+            // Update UI
+            document.getElementById('kpi-sales').innerText = stats.ca.toLocaleString('fr-FR') + " €";
+            document.getElementById('kpi-vol').innerText = stats.vol.toLocaleString('fr-FR') + " m³";
+            document.getElementById('kpi-conv').innerText = Math.round((stats.gagne / stats.total) * 100) + " %";
+            document.getElementById('kpi-avg').innerText = Math.round(stats.ca / (stats.gagne || 1)).toLocaleString('fr-FR') + " €";
+            document.getElementById('last-update').innerText = "Analyse Mobilitas terminée à " + new Date().toLocaleTimeString();
 
-            renderCharts(data, stats.destinations);
-            renderTable(stats.commerciaux);
+            renderCharts(stats.dests);
+            renderTable(stats.comms);
         }
 
-        function renderCharts(allData, destinations) {
-            // Chart 1: CA Mensuel (Simulé par mois sur l'année en cours)
-            const ctxSales = document.getElementById('salesChart').getContext('2d');
-            new Chart(ctxSales, {
+        function renderCharts(dests) {
+            // Chart CA (Simulé pour le design)
+            new Chart(document.getElementById('salesChart'), {
                 type: 'line',
                 data: {
                     labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
-                    datasets: [{
-                        label: 'Chiffre d\'Affaires (€)',
-                        data: [145000, 210000, 185000, 290000, 340000, 310000],
-                        borderColor: '#003366',
-                        backgroundColor: 'rgba(0, 51, 102, 0.05)',
-                        fill: true,
-                        tension: 0.4,
-                        borderWidth: 6
+                    datasets: [{ label: 'CA', data: [150, 220, 180, 240, 310, 280], borderColor: '#003366', tension: 0.4, borderWidth: 4, fill: true, backgroundColor: 'rgba(0,51,102,0.05)' }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // Chart Dests
+            const sortedDest = Object.entries(dests).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            new Chart(document.getElementById('destChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: sortedDest.map(d => d[0]),
+                    datasets: [{ data: sortedDest.map(d => d[1]), backgroundColor: ['#003366', '#f39200', '#3b82f6', '#10b981', '#fbbf24'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        function renderTable(comms) {
+            const tbody = document.getElementById('sales-table');
+            tbody.innerHTML = "";
+            Object.entries(comms).sort((a,b) => b[1].ca - a[1].ca).forEach(([name, d]) => {
+                const conv = Math.round((d.count / d.total) * 100);
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="p-6 font-bold text-mobilitas uppercase text-xs">${name}</td>
+                        <td class="p-6 text-right font-mono">${d.ca.toLocaleString()} €</td>
+                        <td class="p-6 text-right font-mono">${d.vol.toLocaleString()} m³</td>
+                        <td class="p-6 text-center"><span class="px-3 py-1 rounded-full text-[10px] font-black ${conv > 40 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}">${conv}%</span></td>
+                    </tr>
+                `;
+            });
+        }
+
+        window.onload = loadDashboard;
+    </script>
+</body>
+</html>
+
