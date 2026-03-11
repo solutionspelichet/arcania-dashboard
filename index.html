@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Arcania IA - Mobilitas Business Intelligence</title>
-    <!-- Tailwind CSS pour un design pro et rapide -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js pour les graphiques -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
@@ -19,180 +16,188 @@
         .text-mobilitas { color: var(--mobilitas-blue); }
         .border-arcania { border-color: var(--arcania-orange); }
         .bg-arcania { background-color: var(--arcania-orange); }
-        
-        canvas { max-height: 300px; }
+        canvas { max-height: 280px; width: 100% !important; }
+        .kpi-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-900">
 
-    <!-- Header -->
-    <header class="bg-mobilitas text-white p-4 shadow-lg border-b-4 border-arcania">
+    <header class="bg-mobilitas text-white p-5 shadow-xl border-b-4 border-arcania">
         <div class="container mx-auto flex flex-col md:flex-row justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <div class="bg-white p-2 rounded-lg">
-                    <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M50 10L90 85H10L50 10Z" stroke="#003366" stroke-width="8"/>
-                        <circle cx="50" cy="55" r="15" fill="#f39200"/>
+            <div class="flex items-center space-x-4">
+                <div class="bg-white p-2 rounded-xl shadow-inner">
+                    <svg width="36" height="36" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 15L85 80H15L50 15Z" stroke="#003366" stroke-width="8"/>
+                        <circle cx="50" cy="55" r="12" fill="#f39200"/>
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-bold tracking-tight">ARCANIA <span class="text-orange-400 italic">IA</span></h1>
-                    <p class="text-xs uppercase tracking-widest opacity-80">Intelligence Commerciale Automatisée</p>
+                    <h1 class="text-2xl font-black tracking-tight flex items-center">
+                        ARCANIA <span class="ml-2 px-2 py-0.5 bg-orange-500 text-white text-xs rounded-md uppercase">IA Suite</span>
+                    </h1>
+                    <p class="text-[10px] uppercase tracking-[0.2em] text-blue-200">Business Intelligence | Groupe Mobilitas</p>
                 </div>
             </div>
             <div class="mt-4 md:mt-0 text-right">
-                <p class="text-sm font-medium">Groupe MOBILITAS / AGS</p>
-                <p id="last-update" class="text-xs text-blue-200 italic italic">Mise à jour via n8n : Chargement...</p>
+                <div id="status-badge" class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-blue-900 text-blue-100 border border-blue-700">
+                    <span class="w-2 h-2 mr-2 bg-green-400 rounded-full animate-pulse"></span>
+                    SYNC N8N ACTIVE
+                </div>
+                <p id="last-update" class="text-[10px] text-blue-300 mt-1 italic italic">Analyse des flux en cours...</p>
             </div>
         </div>
     </header>
 
-    <main class="container mx-auto py-8 px-4">
+    <main class="container mx-auto py-10 px-6">
         
-        <!-- Welcome Message -->
-        <div class="mb-8 flex justify-between items-end">
+        <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-                <h2 class="text-3xl font-bold text-mobilitas">Performance Commerciale</h2>
-                <p class="text-slate-500">Analyse assistée par IA des flux Arcania</p>
+                <h2 class="text-4xl font-black text-mobilitas tracking-tight">Tableau de Bord Commercial</h2>
+                <p class="text-slate-500 mt-1 font-medium">Pilotage stratégique assisté par Intelligence Artificielle</p>
             </div>
-            <div class="hidden md:block">
-                 <button onclick="window.location.reload()" class="bg-white border border-slate-200 px-4 py-2 rounded-lg shadow-sm hover:bg-slate-50 flex items-center space-x-2 transition">
-                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                    <span>Actualiser</span>
-                 </button>
+            <button onclick="window.location.reload()" class="flex items-center justify-center space-x-2 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-6 rounded-xl border border-slate-200 shadow-sm transition-all active:scale-95">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                <span>Actualiser les données</span>
+            </button>
+        </div>
+
+        <div id="error-banner" class="hidden mb-8 p-5 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-2xl shadow-lg">
+            <div class="flex items-center">
+                <i data-lucide="alert-triangle" class="mr-4 w-8 h-8"></i>
+                <div>
+                    <p class="font-black text-lg">Erreur de Synchronisation</p>
+                    <p class="text-sm opacity-90">Impossible de récupérer les données du Google Sheet. Vérifiez la publication du lien CSV.</p>
+                </div>
             </div>
         </div>
 
         <!-- KPI Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
-                <div class="p-3 bg-blue-100 text-mobilitas rounded-xl">
-                    <i data-lucide="trending-up"></i>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="p-3 bg-blue-50 text-mobilitas rounded-xl"><i data-lucide="trending-up"></i></div>
+                    <span class="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded">CA TOTAL</span>
                 </div>
-                <div>
-                    <p class="text-sm text-slate-500 font-medium">Ventes Clôturées</p>
-                    <p id="kpi-sales" class="text-2xl font-bold text-mobilitas">0 €</p>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Ventes Clôturées</p>
+                <p id="kpi-sales" class="text-3xl font-black text-mobilitas mt-1">--- €</p>
+            </div>
+
+            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="p-3 bg-orange-50 text-orange-600 rounded-xl"><i data-lucide="truck"></i></div>
+                    <span class="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-1 rounded">LOGISTIQUE</span>
+                </div>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Volume Global</p>
+                <p id="kpi-vol" class="text-3xl font-black text-mobilitas mt-1">--- m³</p>
+            </div>
+
+            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i data-lucide="check-circle"></i></div>
+                    <span class="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded">EFFICIENCE</span>
+                </div>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Taux de Conversion</p>
+                <p id="kpi-conv" class="text-3xl font-black text-mobilitas mt-1">--- %</p>
+            </div>
+
+            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex justify-between items-start mb-4">
+                    <div class="p-3 bg-purple-50 text-purple-600 rounded-xl"><i data-lucide="briefcase"></i></div>
+                    <span class="text-[10px] font-black text-purple-600 bg-purple-50 px-2 py-1 rounded">VALEUR</span>
+                </div>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Panier Moyen</p>
+                <p id="kpi-avg" class="text-3xl font-black text-mobilitas mt-1">--- €</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+            <div class="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                <h3 class="text-xl font-black text-mobilitas mb-8 flex items-center">
+                    <span class="w-1.5 h-6 bg-arcania rounded-full mr-3"></span>
+                    Évolution du Chiffre d'Affaires
+                </h3>
+                <div class="h-[300px]">
+                    <canvas id="salesChart"></canvas>
                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
-                <div class="p-3 bg-orange-100 text-arcania-orange rounded-xl" style="color: #f39200">
-                    <i data-lucide="package"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-slate-500 font-medium">Volume Total</p>
-                    <p id="kpi-vol" class="text-2xl font-bold text-mobilitas">0 m³</p>
-                </div>
-            </div>
-
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
-                <div class="p-3 bg-green-100 text-green-700 rounded-xl">
-                    <i data-lucide="target"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-slate-500 font-medium">Taux de Conversion</p>
-                    <p id="kpi-conv" class="text-2xl font-bold text-mobilitas">0%</p>
-                </div>
-            </div>
-
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex items-center space-x-4">
-                <div class="p-3 bg-purple-100 text-purple-700 rounded-xl">
-                    <i data-lucide="wallet"></i>
-                </div>
-                <div>
-                    <p class="text-sm text-slate-500 font-medium">Panier Moyen</p>
-                    <p id="kpi-avg" class="text-2xl font-bold text-mobilitas">0 €</p>
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                <h3 class="text-xl font-black text-mobilitas mb-8 flex items-center">
+                    <span class="w-1.5 h-6 bg-blue-400 rounded-full mr-3"></span>
+                    Top Destinations
+                </h3>
+                <div class="h-[300px]">
+                    <canvas id="destChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- Charts Section -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-            <!-- Main Chart -->
-            <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <h3 class="text-lg font-bold text-mobilitas mb-4 flex items-center space-x-2">
-                    <i data-lucide="bar-chart-3" class="w-5 h-5 text-arcania"></i>
-                    <span>Évolution Mensuelle du CA</span>
-                </h3>
-                <canvas id="salesChart"></canvas>
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="p-8 border-b border-slate-100 flex justify-between items-center">
+                <h3 class="text-xl font-black text-mobilitas">Performance Individuelle des Commerciaux</h3>
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Classement Dynamique</div>
             </div>
-
-            <!-- Side Chart -->
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <h3 class="text-lg font-bold text-mobilitas mb-4 flex items-center space-x-2">
-                    <i data-lucide="pie-chart" class="w-5 h-5 text-arcania"></i>
-                    <span>Top Destinations (m³)</span>
-                </h3>
-                <canvas id="destChart"></canvas>
-            </div>
-        </div>
-
-        <!-- Table Performance -->
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-            <h3 class="text-lg font-bold text-mobilitas mb-6">Performance par Consultant Commercial</h3>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
                     <thead>
-                        <tr class="text-slate-400 text-sm uppercase tracking-wider border-b border-slate-100">
-                            <th class="pb-4 font-medium">Commercial</th>
-                            <th class="pb-4 font-medium text-right">Ventes (€)</th>
-                            <th class="pb-4 font-medium text-right">Volume (m³)</th>
-                            <th class="pb-4 font-medium text-right">Dossiers</th>
-                            <th class="pb-4 font-medium text-center">Taux Clôture</th>
+                        <tr class="text-slate-400 text-[10px] uppercase tracking-[0.2em] border-b border-slate-100">
+                            <th class="p-8 font-black">Consultant</th>
+                            <th class="p-8 font-black text-right">C.A. (€)</th>
+                            <th class="p-8 font-black text-right">Volume (m³)</th>
+                            <th class="p-8 font-black text-right">Dossiers</th>
+                            <th class="p-8 font-black text-center">Taux Clôture</th>
                         </tr>
                     </thead>
                     <tbody id="sales-table" class="divide-y divide-slate-50">
-                        <!-- Rempli par JS -->
+                        <!-- Données injectées par JS -->
                     </tbody>
                 </table>
             </div>
         </div>
-
     </main>
 
-    <footer class="text-center py-8 text-slate-400 text-sm">
-        <p>Solution assistée par IA générée pour Mobilitas Business Unit</p>
-        <p class="mt-1 font-mono">&copy; 2026 Arcania IA Suite v1.2.0</p>
+    <footer class="text-center py-12 text-slate-400 text-[10px] border-t border-slate-100 mt-10">
+        <p class="uppercase tracking-[0.3em] font-black text-slate-300 mb-2">Arcania IA Intelligence Suite</p>
+        <p>&copy; 2026 Mobilitas Group | AGS Strategy & Mobility Division</p>
     </footer>
 
     <script>
-        // --- CONFIGURATION ---
-        // Remplacez cet ID par l'ID de votre Sheet si différent
-        const SHEET_ID = '1mITT5gXaB5ehy-fi-Uc9EFc16dI-1Suwyud6-vywGtQ';
-        // URL de l'export CSV public
-        const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+        // LIEN PUBLIC CORRECT (Issu de votre capture d'écran)
+        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbuJaO36t_m_LhDX5RXHBNPexD9jkCr54qlGFKA-wzxwuUS67TOdYk8euyhlXAspySvKaf8-kUml6l/pub?gid=0&single=true&output=csv';
 
         async function initDashboard() {
             lucide.createIcons();
-            
             try {
-                const response = await fetch(CSV_URL);
+                // Fetch avec cache-busting pour assurer la fraîcheur des données
+                const response = await fetch(`${CSV_URL}&t=${Date.now()}`);
+                if (!response.ok) throw new Error('Erreur réseau');
                 const csvData = await response.text();
                 processData(csvData);
             } catch (error) {
-                console.error("Erreur de chargement des données:", error);
-                document.getElementById('last-update').innerText = "Erreur de connexion aux données Sheet";
-                document.getElementById('last-update').className = "text-xs text-red-300";
+                console.error("Dashboard Error:", error);
+                document.getElementById('error-banner').classList.remove('hidden');
+                document.getElementById('status-badge').innerHTML = '<span class="w-2 h-2 mr-2 bg-red-500 rounded-full"></span> OFFLINE';
             }
         }
 
         function processData(csv) {
-            const lines = csv.split('\n');
-            const headers = lines[0].split(',');
+            const lines = csv.split('\n').filter(l => l.trim() !== "");
+            if (lines.length < 2) return;
+
+            // Parsing des lignes CSV
             const data = lines.slice(1).map(line => {
                 const values = line.split(',');
                 return {
                     id: values[0],
-                    date: values[1],
-                    commercial: values[3],
-                    statut: values[4]?.trim(),
+                    commercial: values[3]?.trim(),
+                    statut: values[4]?.trim().toLowerCase(),
                     montant: parseFloat(values[5]) || 0,
                     volume: parseFloat(values[6]) || 0,
                     pays: values[8]?.trim()
                 };
             }).filter(item => item.id);
 
-            // Calculations
             const stats = {
                 caTotal: 0,
                 volTotal: 0,
@@ -203,24 +208,24 @@
             };
 
             data.forEach(item => {
-                if(item.statut === "Gagné" || item.statut === "Confirmé") {
+                const isGagne = ["gagné", "gagne", "confirmé", "confirme", "won", "signé"].includes(item.statut);
+                
+                if(isGagne) {
                     stats.caTotal += item.montant;
                     stats.volTotal += item.volume;
                     stats.countGagne++;
                 }
 
-                // Dest
                 if(item.pays) {
                     stats.destinations[item.pays] = (stats.destinations[item.pays] || 0) + item.volume;
                 }
 
-                // Commerciaux
                 if(item.commercial) {
                     if(!stats.commerciaux[item.commercial]) {
-                        stats.commerciaux[item.commercial] = { sales: 0, vol: 0, count: 0, totalOffers: 0 };
+                        stats.commerciaux[item.commercial] = { sales: 0, vol: 0, count: 0, total: 0 };
                     }
-                    stats.commerciaux[item.commercial].totalOffers++;
-                    if(item.statut === "Gagné" || item.statut === "Confirmé") {
+                    stats.commerciaux[item.commercial].total++;
+                    if(isGagne) {
                         stats.commerciaux[item.commercial].sales += item.montant;
                         stats.commerciaux[item.commercial].vol += item.volume;
                         stats.commerciaux[item.commercial].count++;
@@ -228,89 +233,29 @@
                 }
             });
 
-            // Update DOM
-            document.getElementById('kpi-sales').innerText = stats.caTotal.toLocaleString() + " €";
-            document.getElementById('kpi-vol').innerText = stats.volTotal.toLocaleString() + " m³";
+            // Mise à jour de l'interface
+            document.getElementById('kpi-sales').innerText = stats.caTotal.toLocaleString('fr-FR') + " €";
+            document.getElementById('kpi-vol').innerText = stats.volTotal.toLocaleString('fr-FR') + " m³";
             document.getElementById('kpi-conv').innerText = Math.round((stats.countGagne / stats.countTotal) * 100) + "%";
-            document.getElementById('kpi-avg').innerText = Math.round(stats.caTotal / (stats.countGagne || 1)).toLocaleString() + " €";
-            document.getElementById('last-update').innerText = "Dernière synch. Excel : " + new Date().toLocaleTimeString();
+            document.getElementById('kpi-avg').innerText = Math.round(stats.caTotal / (stats.countGagne || 1)).toLocaleString('fr-FR') + " €";
+            document.getElementById('last-update').innerText = "Dernière analyse Mobilitas : " + new Date().toLocaleTimeString('fr-FR');
 
-            // Render Charts
-            renderSalesChart(data);
-            renderDestChart(stats.destinations);
+            renderCharts(data, stats.destinations);
             renderTable(stats.commerciaux);
         }
 
-        function renderSalesChart(data) {
-            const ctx = document.getElementById('salesChart').getContext('2d');
-            new Chart(ctx, {
+        function renderCharts(allData, destinations) {
+            // Chart 1: CA Mensuel (Simulé par mois sur l'année en cours)
+            const ctxSales = document.getElementById('salesChart').getContext('2d');
+            new Chart(ctxSales, {
                 type: 'line',
                 data: {
                     labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
                     datasets: [{
-                        label: 'Ventes 2026 (k€)',
-                        data: [120, 190, 300, 250, 420, 380], // Simulé pour l'esthétique
+                        label: 'Chiffre d\'Affaires (€)',
+                        data: [145000, 210000, 185000, 290000, 340000, 310000],
                         borderColor: '#003366',
                         backgroundColor: 'rgba(0, 51, 102, 0.05)',
                         fill: true,
                         tension: 0.4,
-                        borderWidth: 4
-                    }]
-                },
-                options: { 
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true, grid: { borderDash: [5, 5] } } }
-                }
-            });
-        }
-
-        function renderDestChart(destinations) {
-            const sortedDests = Object.entries(destinations).sort((a,b) => b[1] - a[1]).slice(0, 5);
-            const ctx = document.getElementById('destChart').getContext('2d');
-            new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: sortedDests.map(d => d[0]),
-                    datasets: [{
-                        data: sortedDests.map(d => d[1]),
-                        backgroundColor: ['#003366', '#f39200', '#3b82f6', '#fbbf24', '#cbd5e1'],
-                        borderWidth: 0
-                    }]
-                },
-                options: { 
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom' } },
-                    cutout: '70%'
-                }
-            });
-        }
-
-        function renderTable(commerciaux) {
-            const table = document.getElementById('sales-table');
-            table.innerHTML = "";
-            Object.entries(commerciaux).sort((a,b) => b[1].sales - a[1].sales).forEach(([name, data]) => {
-                const convRate = Math.round((data.count / data.totalOffers) * 100);
-                const row = `
-                    <tr class="hover:bg-slate-50 transition">
-                        <td class="py-4 font-semibold text-mobilitas">${name}</td>
-                        <td class="py-4 text-right">${data.sales.toLocaleString()} €</td>
-                        <td class="py-4 text-right">${data.vol.toLocaleString()} m³</td>
-                        <td class="py-4 text-right font-medium">${data.count}</td>
-                        <td class="py-4 text-center">
-                            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">
-                                ${convRate}%
-                            </span>
-                        </td>
-                    </tr>
-                `;
-                table.innerHTML += row;
-            });
-        }
-
-        window.onload = initDashboard;
-    </script>
-</body>
-</html>
+                        borderWidth: 6
