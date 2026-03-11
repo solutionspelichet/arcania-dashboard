@@ -34,7 +34,7 @@
                     </svg>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-black tracking-tighter uppercase">ARCANIA <span class="text-orange-500">IA</span></h1>
+                    <h1 class="text-2xl font-black tracking-tighter uppercase text-white">ARCANIA <span class="text-orange-500">IA</span></h1>
                     <p class="text-[10px] uppercase tracking-widest text-blue-200">Intelligence Reporting | Mobilitas Group</p>
                 </div>
             </div>
@@ -57,7 +57,7 @@
             </div>
             <div class="flex space-x-3">
                 <button id="demo-btn" onclick="injectDemoData()" class="hidden flex items-center space-x-2 bg-orange-500 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg hover:bg-orange-600 transition-all active:scale-95">
-                    <i data-lucide="play-circle" class="w-4 h-4"></i>
+                    <i data-lucide="play-circle" class="w-4 h-4 text-white"></i>
                     <span>Mode Démo (Secours)</span>
                 </button>
                 <button onclick="window.location.reload()" class="flex items-center justify-center space-x-2 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-6 rounded-xl border border-slate-200 shadow-sm transition-all active:scale-95">
@@ -70,10 +70,10 @@
         <!-- Banner Erreur -->
         <div id="error-banner" class="hidden mb-10 p-6 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-r-2xl shadow-lg">
             <div class="flex items-center">
-                <i data-lucide="alert-triangle" class="mr-4 w-10 h-10"></i>
+                <i data-lucide="alert-triangle" class="mr-4 w-10 h-10 text-red-600"></i>
                 <div>
-                    <p class="font-black text-lg uppercase">Erreur de lecture Google</p>
-                    <p class="text-sm opacity-90 font-medium">Google Sheets renvoie une erreur ou le format est incorrect. Utilisez le bouton <strong>Mode Démo</strong> pour la présentation si nécessaire.</p>
+                    <p class="font-black text-lg uppercase text-red-800">Erreur de lecture Google</p>
+                    <p class="text-sm opacity-90 font-medium text-red-700">Le lien Google Sheets semble inaccessible (Erreur 404). Vérifiez la publication ou utilisez le <strong>Mode Démo</strong>.</p>
                 </div>
             </div>
         </div>
@@ -143,8 +143,8 @@
     </footer>
 
     <script>
-        // LIEN PUBLIC DIRECT MIS A JOUR
-        const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbuJaO36t_m_LhDX5RXHBNPexD9jKcR54qlGFKA-wzxwuUS67TOdYk8euyhlXAspySvKaf8-kUmI6I/pub?gid=0&single=true&output=csv';
+        // LIEN PUBLIC DIRECT MIS A JOUR (Identifiant corrigé : Uml6l au lieu de UmI6I)
+        const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbuJaO36t_m_LhDX5RXHBNPexD9jKcR54qlGFKA-wzxwuUS67TOdYk8euyhlXAspySvKaf8-kUml6l/pub?gid=0&single=true&output=csv';
 
         let charts = {};
 
@@ -157,12 +157,18 @@
         async function init() {
             lucide.createIcons();
             try {
-                const res = await fetch(`${CSV_URL}&t=${Date.now()}`);
+                // On essaie de récupérer le CSV avec une gestion de cache
+                const res = await fetch(`${BASE_URL}&nocache=${Date.now()}`);
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+
                 const text = await res.text();
                 
-                // Vérifier si Google renvoie du HTML d'erreur
-                if (text.includes('<html') || text.includes('Désolé')) {
-                    throw new Error("Lien de publication invalide");
+                // Si la réponse n'est pas du CSV (ex: HTML d'erreur Google)
+                if (text.trim().startsWith('<')) {
+                    throw new Error("Format invalide");
                 }
 
                 const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
@@ -174,7 +180,7 @@
                 const sep = lines[0].includes(';') ? ';' : ',';
                 const headers = lines[0].split(sep).map(h => h.trim().replace(/"/g, ''));
                 
-                // Mapping intelligent
+                // Mapping intelligent des colonnes
                 const idx = {
                     val: headers.findIndex(h => /montant|ca|ht|prix/i.test(h)),
                     vol: headers.findIndex(h => /volume|m3|poids/i.test(h)),
@@ -187,7 +193,7 @@
                 processData(rows, idx);
 
             } catch (err) {
-                console.error(err);
+                console.warn("Échec du chargement Google Sheet:", err.message);
                 document.getElementById('error-banner').classList.remove('hidden');
                 document.getElementById('demo-btn').classList.remove('hidden');
                 document.getElementById('status-text').innerText = "ERREUR DE FLUX";
@@ -217,14 +223,18 @@
                 if (isWin) { s.c[n].ca += val; s.c[n].vol += vol; s.c[n].win++; }
             });
 
-            updateUI(s);
+            if (s.total > 0) {
+                updateUI(s);
+            } else {
+                document.getElementById('demo-btn').classList.remove('hidden');
+            }
         }
 
         function updateUI(s) {
             document.getElementById('kpi-sales').innerText = s.ca.toLocaleString('fr-FR') + " €";
             document.getElementById('kpi-vol').innerText = s.vol.toLocaleString('fr-FR') + " m³";
-            document.getElementById('kpi-conv').innerText = Math.round((s.win/s.total)*100) + " %";
-            document.getElementById('kpi-avg').innerText = Math.round(s.ca/(s.win||1)).toLocaleString('fr-FR') + " €";
+            document.getElementById('kpi-conv').innerText = (s.total > 0 ? Math.round((s.win/s.total)*100) : 0) + " %";
+            document.getElementById('kpi-avg').innerText = (s.win > 0 ? Math.round(s.ca/s.win) : 0).toLocaleString('fr-FR') + " €";
             document.getElementById('last-update').innerText = "Analyse terminée à " + new Date().toLocaleTimeString();
 
             renderCharts(s.d, s.c);
@@ -234,48 +244,57 @@
             if (charts.sales) charts.sales.destroy();
             if (charts.dest) charts.dest.destroy();
 
-            charts.sales = new Chart(document.getElementById('salesChart'), {
-                type: 'line',
-                data: { 
-                    labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'], 
-                    datasets: [{ 
-                        data: [150000, 220000, 190000, 310000, 280000, 450000], 
-                        borderColor: '#003366', 
-                        tension: 0.4, 
-                        fill: true, 
-                        backgroundColor: 'rgba(0,51,102,0.05)', 
-                        borderWidth: 5, 
-                        pointRadius: 0 
-                    }] 
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
+            const ctxSales = document.getElementById('salesChart');
+            if (ctxSales) {
+                charts.sales = new Chart(ctxSales.getContext('2d'), {
+                    type: 'line',
+                    data: { 
+                        labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'], 
+                        datasets: [{ 
+                            label: 'CA mensuel (€)',
+                            data: [150000, 220000, 190000, 310000, 280000, 450000], 
+                            borderColor: '#003366', 
+                            tension: 0.4, 
+                            fill: true, 
+                            backgroundColor: 'rgba(0, 51, 102, 0.05)', 
+                            borderWidth: 5, 
+                            pointRadius: 0 
+                        }] 
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+            }
 
-            const sortedDest = Object.entries(dests).sort((a,b) => b[1]-a[1]).slice(0,5);
-            charts.dest = new Chart(document.getElementById('destChart'), {
-                type: 'doughnut',
-                data: { 
-                    labels: sortedDest.map(i => i[0]), 
-                    datasets: [{ 
-                        data: sortedDest.map(i => i[1]), 
-                        backgroundColor: ['#003366', '#f39200', '#3b82f6', '#10b981', '#fbbf24'], 
-                        borderWidth: 0 
-                    }] 
-                },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }
-            });
+            const ctxDest = document.getElementById('destChart');
+            if (ctxDest) {
+                const sortedDest = Object.entries(dests).sort((a,b) => b[1]-a[1]).slice(0,5);
+                charts.dest = new Chart(ctxDest.getContext('2d'), {
+                    type: 'doughnut',
+                    data: { 
+                        labels: sortedDest.map(i => i[0]), 
+                        datasets: [{ 
+                            data: sortedDest.map(i => i[1]), 
+                            backgroundColor: ['#003366', '#f39200', '#3b82f6', '#10b981', '#fbbf24'], 
+                            borderWidth: 0 
+                        }] 
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }
+                });
+            }
 
             const tb = document.getElementById('sales-table');
-            tb.innerHTML = "";
-            Object.entries(comms).sort((a,b) => b[1].ca-a[1].ca).forEach(([name, d]) => {
-                const rate = Math.round((d.win/d.total)*100);
-                tb.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-50 transition">
-                    <td class="p-8 font-black text-mobilitas uppercase text-xs tracking-tighter">${name}</td>
-                    <td class="p-8 text-right font-mono text-sm">${d.ca.toLocaleString()} €</td>
-                    <td class="p-8 text-right font-mono text-sm">${d.vol.toLocaleString()} m³</td>
-                    <td class="p-8 text-center"><span class="px-3 py-1 rounded-full text-[10px] font-black ${rate > 40 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}">${rate}%</span></td>
-                </tr>`;
-            });
+            if (tb) {
+                tb.innerHTML = "";
+                Object.entries(comms).sort((a,b) => b[1].ca-a[1].ca).forEach(([name, d]) => {
+                    const rate = d.total > 0 ? Math.round((d.win/d.total)*100) : 0;
+                    tb.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-50 transition">
+                        <td class="p-8 font-black text-mobilitas uppercase text-xs tracking-tighter">${name}</td>
+                        <td class="p-8 text-right font-mono text-sm">${d.ca.toLocaleString('fr-FR')} €</td>
+                        <td class="p-8 text-right font-mono text-sm">${d.vol.toLocaleString('fr-FR')} m³</td>
+                        <td class="p-8 text-center"><span class="px-3 py-1 rounded-full text-[10px] font-black ${rate > 40 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}">${rate}%</span></td>
+                    </tr>`;
+                });
+            }
         }
 
         function injectDemoData() {
