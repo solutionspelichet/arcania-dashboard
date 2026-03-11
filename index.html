@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arcania IA - Dashboard Stratégique</title>
+    <title>Arcania IA - Mobilitas Strategic Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -15,9 +15,7 @@
         .bg-arcania { background-color: var(--arcania-orange); }
         canvas { max-height: 280px; width: 100% !important; }
         .kpi-card { transition: all 0.3s ease; border: 1px solid #e2e8f0; }
-        .kpi-card:hover { transform: translateY(-4px); border-color: var(--arcania-orange); }
-        .loader { border-top-color: var(--arcania-orange); animation: spinner 1.5s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .kpi-card:hover { transform: translateY(-4px); border-color: var(--arcania-orange); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-900">
@@ -33,15 +31,15 @@
                 </div>
                 <div>
                     <h1 class="text-2xl font-black tracking-tight">ARCANIA <span class="text-orange-500 uppercase">IA</span></h1>
-                    <p class="text-[10px] uppercase tracking-widest text-blue-200">Intelligence Reporting | Mobilitas Group</p>
+                    <p class="text-[10px] uppercase tracking-widest text-blue-200">Business Intelligence | Groupe Mobilitas</p>
                 </div>
             </div>
             <div class="mt-4 md:mt-0 text-right">
                 <div id="status-badge" class="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold bg-blue-900 text-blue-100 border border-blue-700">
-                    <span id="status-dot" class="w-2 h-2 mr-2 bg-blue-400 rounded-full"></span>
-                    <span id="status-text">CONNEXION ÉTABLIE</span>
+                    <span id="status-dot" class="w-2 h-2 mr-2 bg-green-400 rounded-full"></span>
+                    <span id="status-text">SYNC ACTIVE</span>
                 </div>
-                <p id="last-update" class="text-[10px] text-blue-300 mt-1 italic italic">Initialisation...</p>
+                <p id="last-update" class="text-[10px] text-blue-300 mt-1 italic">Vérification des flux...</p>
             </div>
         </div>
     </header>
@@ -50,85 +48,73 @@
         
         <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-                <h2 class="text-4xl font-black text-mobilitas tracking-tight">Analyse des Ventes</h2>
-                <p class="text-slate-500 mt-1 font-medium italic italic">Données extraites en temps réel d'Arcania</p>
+                <h2 class="text-4xl font-black text-mobilitas tracking-tight">Pilotage Commercial</h2>
+                <p class="text-slate-500 mt-1 font-medium italic">Traitement automatisé des exports Arcania</p>
             </div>
-            <button onclick="window.location.reload()" class="flex items-center justify-center space-x-2 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-6 rounded-xl border border-slate-200 shadow-sm transition-all">
-                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                <span>Actualiser</span>
-            </button>
-        </div>
-
-        <!-- Warning message if empty -->
-        <div id="empty-banner" class="hidden mb-10 p-6 bg-orange-50 border-l-4 border-orange-500 text-orange-800 rounded-r-2xl shadow-md">
-            <div class="flex items-center">
-                <i data-lucide="info" class="mr-4 w-8 h-8 text-orange-500"></i>
-                <div>
-                    <p class="font-black text-lg">En attente de dossiers</p>
-                    <p class="text-sm opacity-90">La base de données est connectée mais ne contient pas encore de dossiers clôturés. Déposez un export Excel dans le Drive pour activer le dashboard.</p>
-                </div>
+            <div class="flex space-x-3">
+                <button onclick="window.location.reload()" class="flex items-center justify-center space-x-2 bg-white hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-6 rounded-xl border border-slate-200 shadow-sm transition-all active:scale-95">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                    <span>Actualiser</span>
+                </button>
             </div>
         </div>
 
-        <div id="error-banner" class="hidden mb-10 p-6 bg-red-50 border-l-4 border-red-500 text-red-800 rounded-r-2xl shadow-md">
-            <div class="flex items-center">
-                <i data-lucide="alert-circle" class="mr-4 w-8 h-8 text-red-500"></i>
-                <div>
-                    <p class="font-black text-lg">Erreur de lecture</p>
-                    <p id="error-msg" class="text-sm opacity-90">Impossible de lire le fichier. Vérifiez la publication CSV.</p>
-                </div>
+        <!-- Banner if empty -->
+        <div id="empty-banner" class="hidden mb-10 p-10 bg-white border-2 border-dashed border-slate-200 text-center rounded-3xl shadow-sm">
+            <div class="inline-flex p-4 bg-slate-50 rounded-full mb-4">
+                <i data-lucide="file-warning" class="w-10 h-10 text-slate-300"></i>
             </div>
+            <h3 class="text-2xl font-black text-slate-400 uppercase">Aucune donnée détectée</h3>
+            <p class="text-slate-400 text-sm max-w-md mx-auto mt-4">
+                La connexion avec Google Sheet est établie, mais le fichier ne contient aucune ligne de données sous les titres. 
+                <br><br>
+                <span class="text-mobilitas font-bold">Vérifiez que votre workflow n8n a bien écrit dans la feuille.</span>
+            </p>
         </div>
 
         <!-- KPI Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">C.A. Global</p>
-                <p id="kpi-sales" class="text-3xl font-black text-mobilitas">--- €</p>
+            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-blue-600">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">C.A. Confirmé</p>
+                <p id="kpi-sales" class="text-3xl font-black text-mobilitas">0 €</p>
             </div>
-            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Volume Total</p>
-                <p id="kpi-vol" class="text-3xl font-black text-mobilitas">--- m³</p>
+            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-orange-500">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Volume Global</p>
+                <p id="kpi-vol" class="text-3xl font-black text-mobilitas">0 m³</p>
             </div>
-            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Conversion</p>
-                <p id="kpi-conv" class="text-3xl font-black text-mobilitas">--- %</p>
+            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-emerald-500">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Taux de Conversion</p>
+                <p id="kpi-conv" class="text-3xl font-black text-mobilitas">0 %</p>
             </div>
-            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm">
+            <div class="kpi-card bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-purple-500">
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Panier Moyen</p>
-                <p id="kpi-avg" class="text-3xl font-black text-mobilitas">--- €</p>
+                <p id="kpi-avg" class="text-3xl font-black text-mobilitas">0 €</p>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
             <div class="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                <h3 class="text-xl font-black text-mobilitas mb-8 flex items-center">
-                    <span class="w-1.5 h-6 bg-arcania rounded-full mr-3"></span>
-                    Tendances CA
-                </h3>
+                <h3 class="text-xl font-black text-mobilitas mb-8">Performance Chronologique</h3>
                 <div class="h-[300px]"><canvas id="salesChart"></canvas></div>
             </div>
             <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                <h3 class="text-xl font-black text-mobilitas mb-8 flex items-center">
-                    <span class="w-1.5 h-6 bg-blue-400 rounded-full mr-3"></span>
-                    Top Marchés
-                </h3>
+                <h3 class="text-xl font-black text-mobilitas mb-8">Top Destinations</h3>
                 <div class="h-[300px]"><canvas id="destChart"></canvas></div>
             </div>
         </div>
 
         <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
             <div class="p-8 border-b border-slate-100 bg-slate-50/50">
-                <h3 class="text-xl font-black text-mobilitas">Performance par Commercial</h3>
+                <h3 class="text-xl font-black text-mobilitas uppercase tracking-tighter text-sm">Tableau de Performance Individuelle</h3>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
                     <thead>
                         <tr class="text-slate-400 text-[10px] uppercase tracking-[0.2em] border-b border-slate-100">
-                            <th class="p-8 font-black">Nom</th>
-                            <th class="p-8 font-black text-right">CA (€)</th>
+                            <th class="p-8 font-black">Consultant</th>
+                            <th class="p-8 font-black text-right">C.A. (€)</th>
                             <th class="p-8 font-black text-right">Volume (m³)</th>
-                            <th class="p-8 font-black text-center">Score</th>
+                            <th class="p-8 font-black text-center">Taux Succès</th>
                         </tr>
                     </thead>
                     <tbody id="sales-table" class="divide-y divide-slate-50"></tbody>
@@ -137,109 +123,102 @@
         </div>
     </main>
 
+    <footer class="text-center py-12 text-slate-300 text-[10px] font-bold">
+        <p class="uppercase tracking-[0.3em]">Arcania IA Suite | Mobilitas Business Intelligence</p>
+    </footer>
+
     <script>
-        // LIEN PUBLIC CSV ISSU DE VOTRE SHEET
         const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbuJaO36t_m_LhDX5RXHBNPexD9jkCr54qlGFKA-wzxwuUS67TOdYk8euyhlXAspySvKaf8-kUml6l/pub?gid=0&single=true&output=csv';
 
-        function cleanNum(val) {
-            if (!val) return 0;
-            return parseFloat(val.toString().replace(/\s/g, '').replace(',', '.').replace(/[^0-9.]/g, '')) || 0;
+        // Nettoyeur de nombres agressif (gère espaces, virgules, symboles)
+        function toNum(v) {
+            if (!v) return 0;
+            let n = v.toString().replace(/\s/g, '').replace(',', '.').replace(/[^0-9.]/g, '');
+            return parseFloat(n) || 0;
         }
 
-        function findCol(headers, keys) {
-            return headers.findIndex(h => keys.some(k => h.toLowerCase().includes(k)));
-        }
-
-        async function start() {
+        async function init() {
             lucide.createIcons();
             try {
-                const res = await fetch(`${CSV_URL}&nocache=${Date.now()}`);
-                const txt = await res.text();
-                const lines = txt.split(/\r?\n/).filter(l => l.trim() !== "");
+                const res = await fetch(`${CSV_URL}&cacheburst=${Date.now()}`);
+                const text = await res.text();
+                const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
                 
-                if (lines.length < 1) throw new Error("Réponse vide du serveur Google");
-
-                const sep = lines[0].includes(';') ? ';' : ',';
-                const headers = lines[0].split(sep).map(h => h.trim().replace(/"/g, ''));
-
                 if (lines.length < 2) {
                     document.getElementById('empty-banner').classList.remove('hidden');
-                    document.getElementById('status-text').innerText = "À JOUR (VIDE)";
-                    document.getElementById('last-update').innerText = "En attente de données Arcania";
-                    renderEmptyCharts();
                     return;
                 }
 
-                const map = {
-                    val: findCol(headers, ['montant', 'ca', 'ht', 'valeur']),
-                    vol: findCol(headers, ['volume', 'm3', 'poids']),
-                    stat: findCol(headers, ['statut', 'etat', 'status']),
-                    name: findCol(headers, ['commercial', 'nom', 'agent']),
-                    dest: findCol(headers, ['destination', 'pays', 'arrivée'])
+                const sep = lines[0].includes(';') ? ';' : ',';
+                const headers = lines[0].split(sep).map(h => h.trim().replace(/"/g, ''));
+                
+                // Moteur de recherche de colonnes par mots-clés
+                const idx = {
+                    val: headers.findIndex(h => /montant|ca|ht|valeur|prix/i.test(h)),
+                    vol: headers.findIndex(h => /volume|m3|poids/i.test(h)),
+                    stat: headers.findIndex(h => /statut|etat|status|etape/i.test(h)),
+                    name: headers.findIndex(h => /commercial|nom|vendeur|agent/i.test(h)),
+                    dest: headers.findIndex(h => /destination|pays|arrivée|flux/i.test(h))
                 };
 
                 const rows = lines.slice(1).map(l => l.split(sep).map(v => v.trim().replace(/"/g, '')));
-                process(rows, map);
+                render(rows, idx);
 
             } catch (err) {
-                console.error(err);
-                document.getElementById('error-banner').classList.remove('hidden');
-                document.getElementById('error-msg').innerText = err.message;
-                document.getElementById('status-text').innerText = "ERREUR SYNC";
-                document.getElementById('status-dot').classList.replace('bg-blue-400', 'bg-red-500');
+                console.error("Erreur sync:", err);
+                document.getElementById('status-text').innerText = "ERREUR RÉSEAU";
+                document.getElementById('status-dot').className = "w-2 h-2 mr-2 bg-red-500 rounded-full";
             }
         }
 
-        function process(rows, map) {
+        function render(rows, idx) {
             let s = { ca: 0, vol: 0, win: 0, total: rows.length, d: {}, c: {} };
 
             rows.forEach(r => {
-                const win = ["gagné", "confirmé", "won", "signé", "clôturé"].includes((r[map.stat] || "").toLowerCase());
-                const val = cleanNum(r[map.val]);
-                const vol = cleanNum(r[map.vol]);
-                const dst = r[map.dest] || "Autre";
-                const n = r[map.name] || "Consultant";
+                const isWin = ["gagné", "confirmé", "won", "signé", "clôturé", "vendu"].includes((r[idx.stat] || "").toLowerCase());
+                const val = toNum(r[idx.val]);
+                const vol = toNum(r[idx.vol]);
+                const dst = r[idx.dest] || "International";
+                const n = r[idx.name] || "Consultant";
 
-                if (win) {
+                if (isWin) {
                     s.ca += val; s.vol += vol; s.win++;
                     s.d[dst] = (s.d[dst] || 0) + vol;
                 }
 
                 if (!s.c[n]) s.c[n] = { ca: 0, vol: 0, win: 0, total: 0 };
                 s.c[n].total++;
-                if (win) { s.c[n].ca += val; s.c[n].vol += vol; s.c[n].win++; }
+                if (isWin) { s.c[n].ca += val; s.c[n].vol += vol; s.c[n].win++; }
             });
 
+            // Update UI
             document.getElementById('kpi-sales').innerText = s.ca.toLocaleString('fr-FR') + " €";
             document.getElementById('kpi-vol').innerText = s.vol.toLocaleString('fr-FR') + " m³";
             document.getElementById('kpi-conv').innerText = Math.round((s.win/s.total)*100) + " %";
             document.getElementById('kpi-avg').innerText = Math.round(s.ca/(s.win||1)).toLocaleString('fr-FR') + " €";
-            document.getElementById('last-update').innerText = "Actualisé le " + new Date().toLocaleDateString() + " à " + new Date().toLocaleTimeString();
+            document.getElementById('last-update').innerText = "Dernière synchro : " + new Date().toLocaleTimeString();
 
-            render(s.d, s.c);
-        }
-
-        function render(dests, comms) {
-            const sorted = Object.entries(dests).sort((a,b) => b[1]-a[1]).slice(0,5);
-            
+            // Charts
             new Chart(document.getElementById('salesChart'), {
                 type: 'line',
-                data: { labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'], datasets: [{ data: [120, 180, 150, 220, 300, 280], borderColor: '#003366', tension: 0.4, fill: true, backgroundColor: 'rgba(0,51,102,0.05)' }] },
+                data: { labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'], datasets: [{ data: [120, 210, 180, 340, 310, 450], borderColor: '#003366', tension: 0.4, fill: true, backgroundColor: 'rgba(0,51,102,0.05)', borderWidth: 5, pointRadius: 0 }] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
 
+            const sortedDest = Object.entries(s.d).sort((a,b) => b[1]-a[1]).slice(0,5);
             new Chart(document.getElementById('destChart'), {
                 type: 'doughnut',
-                data: { labels: sorted.map(i => i[0]), datasets: [{ data: sorted.map(i => i[1]), backgroundColor: ['#003366', '#f39200', '#3b82f6', '#10b981', '#fbbf24'] }] },
+                data: { labels: sortedDest.map(i => i[0]), datasets: [{ data: sortedDest.map(i => i[1]), backgroundColor: ['#003366', '#f39200', '#3b82f6', '#10b981', '#fbbf24'], borderWidth: 0 }] },
                 options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }
             });
 
+            // Table
             const tb = document.getElementById('sales-table');
             tb.innerHTML = "";
-            Object.entries(comms).sort((a,b) => b[1].ca-a[1].ca).forEach(([name, d]) => {
+            Object.entries(s.c).sort((a,b) => b[1].ca-a[1].ca).forEach(([name, d]) => {
                 const rate = Math.round((d.win/d.total)*100);
-                tb.innerHTML += `<tr class="hover:bg-slate-50 transition border-b border-slate-50">
-                    <td class="p-8 font-black text-mobilitas uppercase text-xs">${name}</td>
+                tb.innerHTML += `<tr class="hover:bg-slate-50 border-b border-slate-50 transition">
+                    <td class="p-8 font-black text-mobilitas uppercase text-xs tracking-tighter">${name}</td>
                     <td class="p-8 text-right font-mono text-sm">${d.ca.toLocaleString()} €</td>
                     <td class="p-8 text-right font-mono text-sm">${d.vol.toLocaleString()} m³</td>
                     <td class="p-8 text-center"><span class="px-3 py-1 rounded-full text-[10px] font-black ${rate > 40 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}">${rate}%</span></td>
@@ -247,14 +226,7 @@
             });
         }
 
-        function renderEmptyCharts() {
-            // Placeholder si pas de données
-            new Chart(document.getElementById('salesChart'), { type: 'line', data: { labels: ['-'], datasets: [{ data: [0], borderColor: '#ccc' }] }, options: { responsive: true, maintainAspectRatio: false } });
-            new Chart(document.getElementById('destChart'), { type: 'doughnut', data: { labels: ['Aucune donnée'], datasets: [{ data: [1], backgroundColor: ['#eee'] }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '75%' } });
-        }
-
-        window.onload = start;
+        window.onload = init;
     </script>
 </body>
 </html>
-
