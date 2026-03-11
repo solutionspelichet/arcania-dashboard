@@ -294,8 +294,7 @@
                 d: {}, 
                 c: {}, 
                 statuses: {"Clos": 0, "Devis Envoyés": 0, "En Négociation": 0, "Annulés": 0},
-                // NOUVEAU : Tableau vide pour stocker les ventes des 12 mois de l'année
-                monthlyTrend: Array(12).fill(0) 
+                yearlyTrend: {} // NOUVEAU: Objet pour stocker les ventes classées par Année puis par Mois
             };
 
             rows.forEach(r => {
@@ -323,22 +322,33 @@
                     s.win++;
                     s.d[dst] = (s.d[dst] || 0) + vol;
                     
-                    // NOUVEAU : Répartition du CA par mois selon la date du fichier
+                    // NOUVEAU : Extraction intelligente de l'Année et du Mois
                     if (idx.date !== -1 && r[idx.date]) {
                         let dateStr = r[idx.date];
+                        if (dateStr.includes('T')) dateStr = dateStr.split('T')[0]; // Nettoyage format ISO Google (ex: 2025-01-15T00:00:00)
+
                         let month = -1;
+                        let year = -1;
                         
-                        // Détection format DD/MM/YYYY ou YYYY-MM-DD
+                        // Détection format JJ/MM/AAAA ou AAAA-MM-JJ
                         if (dateStr.includes('/')) {
                             const parts = dateStr.split('/');
-                            if (parts.length >= 2) month = parseInt(parts[1], 10) - 1; // Le mois est à l'index 1, on fait -1 car les tableaux JS commencent à 0
+                            if (parts.length >= 3) {
+                                month = parseInt(parts[1], 10) - 1; 
+                                year = parseInt(parts[2], 10);
+                            }
                         } else if (dateStr.includes('-')) {
                             const parts = dateStr.split('-');
-                            if (parts.length >= 2) month = parseInt(parts[1], 10) - 1;
+                            if (parts.length >= 3) {
+                                year = parseInt(parts[0], 10);
+                                month = parseInt(parts[1], 10) - 1;
+                            }
                         }
                         
-                        if (month >= 0 && month <= 11) {
-                            s.monthlyTrend[month] += val;
+                        // Ajout sécurisé au tableau des tendances
+                        if (year >= 2000 && month >= 0 && month <= 11) {
+                            if (!s.yearlyTrend[year]) s.yearlyTrend[year] = Array(12).fill(0);
+                            s.yearlyTrend[year][month] += val;
                         }
                     }
                 }
@@ -372,40 +382,73 @@
         }
 
         function renderCharts(s) {
-            // 1. TENDANCE MENSUELLE (Ligne - DYNAMIQUE)
+            // 1. TENDANCE MENSUELLE MULTI-ANNÉES (Ligne - DYNAMIQUE)
             if (charts.trend) charts.trend.destroy();
             const ctxTrend = document.getElementById('trendChart').getContext('2d');
             
-            const currentYear = new Date().getFullYear();
             const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
             
-            // On convertit les vraies données en K€ pour le graphique
-            const currentYearData = s.monthlyTrend.map(val => val > 0 ? (val / 1000).toFixed(1) : 0);
+            // On récupère toutes les années trouvées, triées de la plus récente à la plus ancienne (ex: 2026, 2025)
+            const years = Object.keys(s.yearlyTrend).sort((a,b) => b - a);
+            const datasets = [];
+            
+            // Design : L'année courante en Cyan plein, les années précédentes en pointillé gris ou orange
+            const styleColors = [
+                { border: '#06b6d4', bg: 'rgba(6, 182, 212, 0.1)', dash: [] }, 
+                { border: '#cbd5e1', bg: 'transparent', dash: [5, 5] }, 
+                { border: '#f39200', bg: 'transparent', dash: [2, 2] }
+            ];
+
+            years.forEach((year, index) => {
+                const style = styleColors[index % styleColors.length];
+                
+                // On trouve le dernier mois contenant des ventes pour couper la ligne et éviter qu'elle ne plonge à 0 dans le futur
+                let lastNonZeroMonth = -1;
+                for (let i = 11; i >= 0; i--) {
+                    if (s.yearlyTrend[year][i] > 0) {
+                        lastNonZeroMonth = i;
+                        break;
+                    }
+                }
+
+                // Formatage des données (en K€), on met 'null' pour le futur pour stopper le tracé
+                const dataInK = s.yearlyTrend[year].map((val, i) => {
+                    if (i > lastNonZeroMonth && index === 0) return null; // Coupe la ligne de l'année courante
+                    return parseFloat((val / 1000).toFixed(1));
+                });
+
+                datasets.push({
+                    label: year + ' (K€)',
+                    data: dataInK,
+                    borderColor: style.border,
+                    backgroundColor: style.bg,
+                    borderWidth: index === 0 ? 2 : 1.5,
+                    borderDash: style.dash,
+                    tension: 0.3,
+                    fill: index === 0, // Remplit uniquement la courbe la plus récente
+                    pointRadius: index === 0 ? 3 : 0,
+                    pointBackgroundColor: style.border,
+                    spanGaps: true
+                });
+            });
+
+            // Si aucune donnée de date trouvée, on affiche un graphique vide propre
+            if (datasets.length === 0) {
+                datasets.push({ label: 'Aucune donnée', data: Array(12).fill(0), borderColor: '#334155' });
+            }
 
             charts.trend = new Chart(ctxTrend, {
                 type: 'line',
                 data: {
                     labels: months,
-                    datasets: [
-                        {
-                            label: currentYear.toString() + ' (K€)',
-                            data: currentYearData,
-                            borderColor: '#06b6d4', 
-                            backgroundColor: 'rgba(6, 182, 212, 0.1)',
-                            borderWidth: 2,
-                            tension: 0.3,
-                            fill: true,
-                            pointRadius: 3,
-                            pointBackgroundColor: '#06b6d4'
-                        }
-                    ]
+                    datasets: datasets
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { position: 'top', align: 'center', labels: { boxWidth: 15, usePointStyle: true } } },
                     scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 50 } }, // Ajustement automatique de l'échelle y
+                        y: { beginAtZero: true, ticks: { stepSize: 5 } },
                         x: { grid: { display: false } }
                     }
                 }
@@ -507,8 +550,11 @@
                 vol: 11200, 
                 win: 154, 
                 total: 375,
-                // On inclut ici une fausse évolution pour que la démo ressemble à la capture
-                monthlyTrend: [1500000, 2100000, 800000, 1600000, 1200000, 1400000, 2200000, 2400000, 2600000, 0, 0, 0],
+                // On inclut ici une fausse évolution multi-années pour la démo
+                yearlyTrend: {
+                    2026: [1500000, 2100000, 800000, 1600000, 1200000, 1400000, 2200000, 2400000, 2600000, 0, 0, 0],
+                    2025: [1200000, 1800000, 900000, 1400000, 1100000, 1300000, 2000000, 2100000, 2400000, 2000000, 2200000, 2500000]
+                },
                 statuses: {
                     "Clos (Confirmés)": 154,
                     "Devis Envoyés": 120,
