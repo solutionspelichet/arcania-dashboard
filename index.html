@@ -73,7 +73,7 @@
         </div>
     </header>
 
-    <!-- Boutons d'action (Cachés en présentation, utiles pour le debug) -->
+    <!-- Boutons d'action -->
     <div class="flex justify-between items-center mb-6">
         <div class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-300 flex items-center shadow-sm">
             <i data-lucide="calendar" class="w-4 h-4 mr-2"></i>
@@ -212,8 +212,8 @@
 
     <!-- Script de logique -->
     <script>
-        // LIEN GOOGLE SHEET CORRECT (Avec le bon identifiant au caractère près)
-        const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbuJa036t_m_LhDX5RXHBNPexD9jKcR54qlGFKA-wzxwuUS67TOdYk8euyhlXAspySvKaf8-kUmI6I/pub?gid=0&single=true&output=csv';
+        // LIEN GOOGLE SHEET CORRECT
+        const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbuJaO36t_m_LhDX5RXHBNPexD9jKcR54qlGFKA-wzxwuUS67TOdYk8euyhlXAspySvKaf8-kUml6l/pub?gid=0&single=true&output=csv';
 
         let charts = {};
 
@@ -227,7 +227,6 @@
         Chart.defaults.plugins.tooltip.borderColor = '#334155';
         Chart.defaults.plugins.tooltip.borderWidth = 1;
 
-        // Formater les grands nombres (ex: 2800000 -> 2.8M)
         function formatMillions(num) {
             if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
             if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
@@ -243,13 +242,11 @@
         async function init() {
             lucide.createIcons();
 
-            // --- Mise à jour dynamique de l'année ---
             const currentYear = new Date().getFullYear();
             const yearDisplay = document.getElementById('current-year-display');
             if (yearDisplay) {
                 yearDisplay.innerText = `01/01/${currentYear} - 31/12/${currentYear}`;
             }
-            // ----------------------------------------
 
             try {
                 const res = await fetch(BASE_URL, { method: 'GET', headers: { 'Accept': 'text/csv' }, cache: 'no-store' });
@@ -273,7 +270,9 @@
                     vol: headers.findIndex(h => /volume|m3|poids/i.test(h)),
                     stat: headers.findIndex(h => /statut|etat|status/i.test(h)),
                     name: headers.findIndex(h => /commercial|nom|vendeur/i.test(h)),
-                    dest: headers.findIndex(h => /destination|pays|arrivée/i.test(h))
+                    dest: headers.findIndex(h => /destination|pays|arrivée/i.test(h)),
+                    // NOUVEAU : On cherche la colonne des dates pour la courbe dynamique !
+                    date: headers.findIndex(h => /date|mois|créé|created/i.test(h))
                 };
 
                 const rows = lines.slice(1).map(l => l.split(sep).map(v => v.trim().replace(/"/g, '')));
@@ -282,12 +281,22 @@
             } catch (err) {
                 console.warn("Échec Google Sheet, passage en mode démo:", err.message);
                 document.getElementById('error-banner').classList.remove('hidden');
-                injectDemoData(); // Auto-fallback for demo
+                injectDemoData(); 
             }
         }
 
         function processData(rows, idx) {
-            let s = { ca: 0, vol: 0, win: 0, total: rows.length, d: {}, c: {}, statuses: {"Clos": 0, "Devis Envoyés": 0, "En Négociation": 0, "Annulés": 0} };
+            let s = { 
+                ca: 0, 
+                vol: 0, 
+                win: 0, 
+                total: rows.length, 
+                d: {}, 
+                c: {}, 
+                statuses: {"Clos": 0, "Devis Envoyés": 0, "En Négociation": 0, "Annulés": 0},
+                // NOUVEAU : Tableau vide pour stocker les ventes des 12 mois de l'année
+                monthlyTrend: Array(12).fill(0) 
+            };
 
             rows.forEach(r => {
                 const statusRaw = (r[idx.stat] || "").toLowerCase();
@@ -309,8 +318,29 @@
                 const n = r[idx.name] || "Consultant";
 
                 if (isWin) {
-                    s.ca += val; s.vol += vol; s.win++;
+                    s.ca += val; 
+                    s.vol += vol; 
+                    s.win++;
                     s.d[dst] = (s.d[dst] || 0) + vol;
+                    
+                    // NOUVEAU : Répartition du CA par mois selon la date du fichier
+                    if (idx.date !== -1 && r[idx.date]) {
+                        let dateStr = r[idx.date];
+                        let month = -1;
+                        
+                        // Détection format DD/MM/YYYY ou YYYY-MM-DD
+                        if (dateStr.includes('/')) {
+                            const parts = dateStr.split('/');
+                            if (parts.length >= 2) month = parseInt(parts[1], 10) - 1; // Le mois est à l'index 1, on fait -1 car les tableaux JS commencent à 0
+                        } else if (dateStr.includes('-')) {
+                            const parts = dateStr.split('-');
+                            if (parts.length >= 2) month = parseInt(parts[1], 10) - 1;
+                        }
+                        
+                        if (month >= 0 && month <= 11) {
+                            s.monthlyTrend[month] += val;
+                        }
+                    }
                 }
 
                 if (!s.c[n]) s.c[n] = { ca: 0, vol: 0, win: 0, total: 0 };
@@ -323,7 +353,6 @@
         }
 
         function updateUI(s) {
-            // Mise à jour des KPIs textuels pour correspondre au design
             const caFormatted = formatMillions(s.ca);
             document.getElementById('kpi-sales').innerText = caFormatted.includes('M') ? caFormatted + ' €' : s.ca.toLocaleString('fr-FR') + ' €';
             
@@ -343,18 +372,15 @@
         }
 
         function renderCharts(s) {
-            // 1. TENDANCE MENSUELLE (Ligne)
+            // 1. TENDANCE MENSUELLE (Ligne - DYNAMIQUE)
             if (charts.trend) charts.trend.destroy();
             const ctxTrend = document.getElementById('trendChart').getContext('2d');
             
-            // Simulation de données mensuelles pour le rendu visuel
-            // On peut aussi utiliser l'année courante dans la légende du graphique
             const currentYear = new Date().getFullYear();
-            const prevYear = currentYear - 1;
+            const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
             
-            const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep'];
-            const currentYearData = [1.5, 2.1, 0.8, 1.6, 1.2, 1.4, 2.2, 2.4, 2.6]; // K€
-            const prevYearData = [2.2, 1.8, 0.5, 1.3, 1.1, 1.8, 1.5, 2.0, 2.1];
+            // On convertit les vraies données en K€ pour le graphique
+            const currentYearData = s.monthlyTrend.map(val => val > 0 ? (val / 1000).toFixed(1) : 0);
 
             charts.trend = new Chart(ctxTrend, {
                 type: 'line',
@@ -362,24 +388,15 @@
                     labels: months,
                     datasets: [
                         {
-                            label: currentYear.toString(),
+                            label: currentYear.toString() + ' (K€)',
                             data: currentYearData,
-                            borderColor: '#06b6d4', // Cyan
+                            borderColor: '#06b6d4', 
                             backgroundColor: 'rgba(6, 182, 212, 0.1)',
                             borderWidth: 2,
                             tension: 0.3,
                             fill: true,
                             pointRadius: 3,
                             pointBackgroundColor: '#06b6d4'
-                        },
-                        {
-                            label: prevYear.toString(),
-                            data: prevYearData,
-                            borderColor: '#cbd5e1', // Slate light
-                            borderWidth: 1.5,
-                            borderDash: [5, 5],
-                            tension: 0.3,
-                            pointRadius: 0
                         }
                     ]
                 },
@@ -388,7 +405,7 @@
                     maintainAspectRatio: false,
                     plugins: { legend: { position: 'top', align: 'center', labels: { boxWidth: 15, usePointStyle: true } } },
                     scales: {
-                        y: { beginAtZero: true, max: 3.0, ticks: { stepSize: 0.5 } },
+                        y: { beginAtZero: true, ticks: { stepSize: 50 } }, // Ajustement automatique de l'échelle y
                         x: { grid: { display: false } }
                     }
                 }
@@ -399,10 +416,9 @@
             const sortedDest = Object.entries(s.d).sort((a,b) => b[1]-a[1]).slice(0,5);
             const ctxDest = document.getElementById('destChart').getContext('2d');
             
-            // Création d'un gradient pour les barres (Orange -> Blue)
             const gradientBar = ctxDest.createLinearGradient(0, 0, 400, 0);
-            gradientBar.addColorStop(0, '#f39200'); // Orange Arcania
-            gradientBar.addColorStop(1, '#3b82f6'); // Bleu
+            gradientBar.addColorStop(0, '#f39200'); 
+            gradientBar.addColorStop(1, '#3b82f6'); 
 
             charts.dest = new Chart(ctxDest, {
                 type: 'bar',
@@ -416,7 +432,7 @@
                     }]
                 },
                 options: {
-                    indexAxis: 'y', // Barres horizontales
+                    indexAxis: 'y', 
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
@@ -436,7 +452,7 @@
                     labels: Object.keys(s.statuses),
                     datasets: [{
                         data: Object.values(s.statuses),
-                        backgroundColor: ['#06b6d4', '#3b82f6', '#f39200', '#ef4444'], // Cyan, Bleu, Orange, Rouge
+                        backgroundColor: ['#06b6d4', '#3b82f6', '#f39200', '#ef4444'], 
                         borderWidth: 0,
                         hoverOffset: 4
                     }]
@@ -462,7 +478,6 @@
             sortedComms.forEach(([name, d], index) => {
                 const rate = d.total > 0 ? Math.round((d.win/d.total)*100) : 0;
                 const rank = index + 1;
-                // Highlight pour le premier
                 const rowClass = rank === 1 
                     ? "bg-[#f39200]/20 text-white font-bold border-l-4 border-l-[#f39200]" 
                     : "hover:bg-slate-700/30 transition text-slate-300";
@@ -480,7 +495,7 @@
             });
         }
 
-        // Fonction pour injecter des données fidèles à la capture d'écran de référence
+        // Mode Démo
         function injectDemoData() {
             document.getElementById('demo-btn').classList.add('hidden');
             document.getElementById('error-banner').classList.add('hidden');
@@ -492,6 +507,8 @@
                 vol: 11200, 
                 win: 154, 
                 total: 375,
+                // On inclut ici une fausse évolution pour que la démo ressemble à la capture
+                monthlyTrend: [1500000, 2100000, 800000, 1600000, 1200000, 1400000, 2200000, 2400000, 2600000, 0, 0, 0],
                 statuses: {
                     "Clos (Confirmés)": 154,
                     "Devis Envoyés": 120,
@@ -513,7 +530,6 @@
                 }
             };
             
-            // Ajustement visuel spécifique pour coller à l'image
             document.getElementById('kpi-sales-sub').innerText = "+12.5% YoY";
             document.getElementById('kpi-avg-sub').innerText = "+5%";
             document.getElementById('kpi-vol-sub').innerText = "+8%";
