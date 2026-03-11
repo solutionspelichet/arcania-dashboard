@@ -77,7 +77,7 @@
     <div class="flex justify-between items-center mb-6">
         <div class="bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-300 flex items-center shadow-sm">
             <i data-lucide="calendar" class="w-4 h-4 mr-2"></i>
-            01/01/2024 - 31/12/2024
+            <span id="current-year-display">01/01/2024 - 31/12/2024</span>
             <i data-lucide="chevron-down" class="w-4 h-4 ml-2"></i>
         </div>
         <div class="flex space-x-3">
@@ -242,6 +242,15 @@
 
         async function init() {
             lucide.createIcons();
+
+            // --- Mise à jour dynamique de l'année ---
+            const currentYear = new Date().getFullYear();
+            const yearDisplay = document.getElementById('current-year-display');
+            if (yearDisplay) {
+                yearDisplay.innerText = `01/01/${currentYear} - 31/12/${currentYear}`;
+            }
+            // ----------------------------------------
+
             try {
                 const res = await fetch(BASE_URL, { method: 'GET', headers: { 'Accept': 'text/csv' }, cache: 'no-store' });
                 
@@ -339,6 +348,10 @@
             const ctxTrend = document.getElementById('trendChart').getContext('2d');
             
             // Simulation de données mensuelles pour le rendu visuel
+            // On peut aussi utiliser l'année courante dans la légende du graphique
+            const currentYear = new Date().getFullYear();
+            const prevYear = currentYear - 1;
+            
             const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep'];
             const currentYearData = [1.5, 2.1, 0.8, 1.6, 1.2, 1.4, 2.2, 2.4, 2.6]; // K€
             const prevYearData = [2.2, 1.8, 0.5, 1.3, 1.1, 1.8, 1.5, 2.0, 2.1];
@@ -349,7 +362,7 @@
                     labels: months,
                     datasets: [
                         {
-                            label: '2024',
+                            label: currentYear.toString(),
                             data: currentYearData,
                             borderColor: '#06b6d4', // Cyan
                             backgroundColor: 'rgba(6, 182, 212, 0.1)',
@@ -360,7 +373,7 @@
                             pointBackgroundColor: '#06b6d4'
                         },
                         {
-                            label: '2023',
+                            label: prevYear.toString(),
                             data: prevYearData,
                             borderColor: '#cbd5e1', // Slate light
                             borderWidth: 1.5,
