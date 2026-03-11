@@ -33,6 +33,11 @@
             border: 1px solid #3b82f6;
             box-shadow: 0 0 15px rgba(59, 130, 246, 0.3), inset 0 0 10px rgba(59, 130, 246, 0.1);
         }
+        /* Nouveau style pour le Pipeline */
+        .glow-purple {
+            border: 1px solid #a855f7;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.3), inset 0 0 10px rgba(168, 85, 247, 0.1);
+        }
         /* Scrollbar custom pour le thème sombre */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
@@ -105,27 +110,33 @@
     <!-- MAIN DASHBOARD -->
     <main id="dashboard-ui">
         
-        <!-- ROW 1 : KPIs (5 colonnes) -->
-        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+        <!-- ROW 1 : KPIs -->
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
             
             <!-- Ventes Clôturées -->
             <div class="glass-panel rounded-xl p-5 glow-orange flex flex-col justify-center relative overflow-hidden">
                 <div class="text-center z-10">
                     <p class="text-sm font-semibold text-slate-300 mb-1">Ventes Clôturées</p>
                     <p id="kpi-sales" class="text-3xl font-bold text-white tracking-tight">0 €</p>
-                    <p id="kpi-sales-sub" class="text-xs font-bold text-green-400 mt-1">+0.0% YoY</p>
                 </div>
-                <!-- Décoration fond -->
                 <div class="absolute bottom-0 left-0 right-0 h-8 flex items-end justify-center space-x-1 opacity-30 px-4">
                     <div class="w-1/6 bg-orange-500 h-2"></div><div class="w-1/6 bg-orange-500 h-3"></div><div class="w-1/6 bg-orange-500 h-5"></div><div class="w-1/6 bg-orange-500 h-4"></div><div class="w-1/6 bg-orange-500 h-7"></div><div class="w-1/6 bg-orange-500 h-6"></div>
                 </div>
+            </div>
+
+            <!-- Pipeline Actif -->
+            <div class="glass-panel rounded-xl p-5 glow-purple flex flex-col justify-center text-center relative overflow-hidden">
+                <div class="text-center z-10">
+                    <p class="text-sm font-semibold text-slate-300 mb-1">Valeur du Pipe <br><span class="text-[10px] font-normal text-slate-400">(Devis & Négo)</span></p>
+                    <p id="kpi-pipe" class="text-3xl font-bold text-white tracking-tight">0 €</p>
+                </div>
+                <div class="absolute bottom-0 left-0 right-0 h-4 bg-gradient-to-t from-purple-500/30 to-transparent"></div>
             </div>
 
             <!-- Panier Moyen -->
             <div class="glass-panel rounded-xl p-5 glow-cyan flex flex-col justify-center text-center">
                 <p class="text-sm font-semibold text-slate-300 mb-1">Panier Moyen <br><span class="text-[10px] font-normal text-slate-400">(Déménagement)</span></p>
                 <p id="kpi-avg" class="text-3xl font-bold text-white tracking-tight">0 €</p>
-                <p id="kpi-avg-sub" class="text-xs font-bold text-green-400 mt-1">+0%</p>
             </div>
 
             <!-- Taux Conversion -->
@@ -141,7 +152,6 @@
             <div class="glass-panel rounded-xl p-5 glow-cyan flex flex-col justify-center text-center">
                 <p class="text-sm font-semibold text-slate-300 mb-1">Volume <br><span class="text-[10px] font-normal text-slate-400">(Mètres Cubes - m³)</span></p>
                 <p id="kpi-vol" class="text-3xl font-bold text-white tracking-tight">0 m³</p>
-                <p id="kpi-vol-sub" class="text-xs font-bold text-green-400 mt-1">+0%</p>
             </div>
 
             <!-- Nombre de dossiers -->
@@ -152,12 +162,12 @@
 
         </div>
 
-        <!-- ROW 2 : Charts (2 colonnes) -->
+        <!-- ROW 2 : Charts -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             
             <!-- Ligne de tendance -->
             <div class="glass-panel rounded-xl p-5">
-                <h3 class="text-sm font-semibold text-white mb-4">Tendance Mensuelle du CA (K€)</h3>
+                <h3 class="text-sm font-semibold text-white mb-4">Prévisions & Tendance du CA (K€)</h3>
                 <div class="h-[250px] relative">
                     <canvas id="trendChart"></canvas>
                 </div>
@@ -176,7 +186,7 @@
         <!-- ROW 3 : Table & Doughnut -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            <!-- Table Commerciaux (Prend 2/3) -->
+            <!-- Table Commerciaux -->
             <div class="lg:col-span-2 glass-panel rounded-xl overflow-hidden flex flex-col">
                 <div class="p-4 border-b border-slate-700/50">
                     <h3 class="text-sm font-semibold text-white">Top Commerciaux (Performance & Taux Clôture)</h3>
@@ -199,7 +209,7 @@
                 </div>
             </div>
 
-            <!-- Doughnut Statuts (Prend 1/3) -->
+            <!-- Doughnut Statuts -->
             <div class="glass-panel rounded-xl p-5 flex flex-col">
                 <h3 class="text-sm font-semibold text-white mb-4">État des Dossiers (en cours/clos)</h3>
                 <div class="flex-1 relative flex justify-center items-center min-h-[200px]">
@@ -212,12 +222,11 @@
 
     <!-- Script de logique -->
     <script>
-        // LIEN GOOGLE SHEET FINAL CORRECT ET VERIFIÉ
+        // LIEN GOOGLE SHEET
         const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbuJa036t_m_LhDX5RXHBNPexD9jKcR54qlGFKA-wzxwuUS67TOdYk8euyhlXAspySvKaf8-kUmI6I/pub?gid=0&single=true&output=csv';
 
         let charts = {};
 
-        // Configuration par défaut de Chart.js pour le thème sombre
         Chart.defaults.color = '#94a3b8';
         Chart.defaults.font.family = "'Inter', sans-serif";
         Chart.defaults.scale.grid.color = 'rgba(51, 65, 85, 0.5)';
@@ -237,6 +246,27 @@
             if (!v) return 0;
             let n = v.toString().replace(/\s/g, '').replace(',', '.').replace(/[^0-9.]/g, '');
             return parseFloat(n) || 0;
+        }
+
+        // Fonction pour extraire et analyser correctement une date issue de Google Sheets
+        function parseDateString(dateStr) {
+            if (!dateStr) return { month: -1, year: -1 };
+            if (dateStr.includes('T')) dateStr = dateStr.split('T')[0];
+            let month = -1, year = -1;
+            if (dateStr.includes('/')) {
+                const parts = dateStr.split('/');
+                if (parts.length >= 3) {
+                    month = parseInt(parts[1], 10) - 1; 
+                    year = parseInt(parts[2], 10);
+                }
+            } else if (dateStr.includes('-')) {
+                const parts = dateStr.split('-');
+                if (parts.length >= 3) {
+                    year = parseInt(parts[0], 10);
+                    month = parseInt(parts[1], 10) - 1;
+                }
+            }
+            return { month, year };
         }
 
         async function init() {
@@ -265,14 +295,17 @@
                 const sep = lines[0].includes(';') ? ';' : ',';
                 const headers = lines[0].split(sep).map(h => h.trim().replace(/"/g, ''));
                 
+                // Extraction intelligente des colonnes (Recherche des notions de Facturation, Signature ou Forecast)
                 const idx = {
                     val: headers.findIndex(h => /montant|ca|ht|prix/i.test(h)),
                     vol: headers.findIndex(h => /volume|m3|poids/i.test(h)),
                     stat: headers.findIndex(h => /statut|etat|status/i.test(h)),
                     name: headers.findIndex(h => /commercial|nom|vendeur/i.test(h)),
                     dest: headers.findIndex(h => /destination|pays|arrivée/i.test(h)),
-                    // NOUVEAU : On cherche la colonne des dates pour la courbe dynamique !
-                    date: headers.findIndex(h => /date|mois|créé|created/i.test(h))
+                    // Date de création standard
+                    date: headers.findIndex(h => /création|creation|créé/i.test(h) || h.toLowerCase() === 'date'),
+                    // NOUVEAU : Date prévisionnelle (Facturation, signature, forecast...)
+                    forecastDate: headers.findIndex(h => /factur|forecast|prévu|prevu|signat|clôtur|clotur/i.test(h))
                 };
 
                 const rows = lines.slice(1).map(l => l.split(sep).map(v => v.trim().replace(/"/g, '')));
@@ -289,12 +322,15 @@
             let s = { 
                 ca: 0, 
                 vol: 0, 
+                pipeCa: 0,
                 win: 0, 
                 total: rows.length, 
                 d: {}, 
                 c: {}, 
                 statuses: {"Clos": 0, "Devis Envoyés": 0, "En Négociation": 0, "Annulés": 0},
-                yearlyTrend: {} // NOUVEAU: Objet pour stocker les ventes classées par Année puis par Mois
+                statusValue: {"Clos": 0, "Devis Envoyés": 0, "En Négociation": 0, "Annulés": 0},
+                yearlyTrend: {},
+                yearlyPipeTrend: {} 
             };
 
             rows.forEach(r => {
@@ -303,18 +339,28 @@
                 
                 const isWin = ["gagné", "confirmé", "won", "signé", "clôturé", "vendu", "gagne", "confirme"].includes(statusRaw);
                 const isLost = ["perdu", "annulé", "lost", "canceled", "annule"].includes(statusRaw);
-                const isNego = ["négo", "nego", "cours", "progress"].some(k => statusRaw.includes(k));
+                const isNego = ["négo", "nego", "cours", "progress", "en cours"].some(k => statusRaw.includes(k));
 
                 if (isWin) statusCat = "Clos";
                 else if (isLost) statusCat = "Annulés";
                 else if (isNego) statusCat = "En Négociation";
 
-                s.statuses[statusCat]++;
-
                 const val = toNum(r[idx.val]);
                 const vol = toNum(r[idx.vol]);
+
+                s.statuses[statusCat]++;
+                s.statusValue[statusCat] += val;
+
                 const dst = (r[idx.dest] || "INTERNATIONAL").toUpperCase();
                 const n = r[idx.name] || "Consultant";
+
+                // Extraction des dates : On privilégie la date de signature/facturation (forecast)
+                let creationInfo = parseDateString(idx.date !== -1 ? r[idx.date] : null);
+                let forecastInfo = parseDateString(idx.forecastDate !== -1 ? r[idx.forecastDate] : null);
+
+                // Si on a une date de prévision/signature, on l'utilise, sinon on rabat sur la date de création
+                let actionYear = forecastInfo.year !== -1 ? forecastInfo.year : creationInfo.year;
+                let actionMonth = forecastInfo.month !== -1 ? forecastInfo.month : creationInfo.month;
 
                 if (isWin) {
                     s.ca += val; 
@@ -322,34 +368,19 @@
                     s.win++;
                     s.d[dst] = (s.d[dst] || 0) + vol;
                     
-                    // NOUVEAU : Extraction intelligente de l'Année et du Mois
-                    if (idx.date !== -1 && r[idx.date]) {
-                        let dateStr = r[idx.date];
-                        if (dateStr.includes('T')) dateStr = dateStr.split('T')[0]; // Nettoyage format ISO Google (ex: 2025-01-15T00:00:00)
+                    // Placement du CA dans la courbe de revenus
+                    if (actionYear >= 2000 && actionMonth >= 0 && actionMonth <= 11) {
+                        if (!s.yearlyTrend[actionYear]) s.yearlyTrend[actionYear] = Array(12).fill(0);
+                        s.yearlyTrend[actionYear][actionMonth] += val;
+                    }
 
-                        let month = -1;
-                        let year = -1;
-                        
-                        // Détection format JJ/MM/AAAA ou AAAA-MM-JJ
-                        if (dateStr.includes('/')) {
-                            const parts = dateStr.split('/');
-                            if (parts.length >= 3) {
-                                month = parseInt(parts[1], 10) - 1; 
-                                year = parseInt(parts[2], 10);
-                            }
-                        } else if (dateStr.includes('-')) {
-                            const parts = dateStr.split('-');
-                            if (parts.length >= 3) {
-                                year = parseInt(parts[0], 10);
-                                month = parseInt(parts[1], 10) - 1;
-                            }
-                        }
-                        
-                        // Ajout sécurisé au tableau des tendances
-                        if (year >= 2000 && month >= 0 && month <= 11) {
-                            if (!s.yearlyTrend[year]) s.yearlyTrend[year] = Array(12).fill(0);
-                            s.yearlyTrend[year][month] += val;
-                        }
+                } else if (statusCat === "Devis Envoyés" || statusCat === "En Négociation") {
+                    s.pipeCa += val;
+
+                    // NOUVEAU : Placement de la valeur dans la courbe de PRÉVISION
+                    if (actionYear >= 2000 && actionMonth >= 0 && actionMonth <= 11) {
+                        if (!s.yearlyPipeTrend[actionYear]) s.yearlyPipeTrend[actionYear] = Array(12).fill(0);
+                        s.yearlyPipeTrend[actionYear][actionMonth] += val;
                     }
                 }
 
@@ -366,6 +397,9 @@
             const caFormatted = formatMillions(s.ca);
             document.getElementById('kpi-sales').innerText = caFormatted.includes('M') ? caFormatted + ' €' : s.ca.toLocaleString('fr-FR') + ' €';
             
+            const pipeFormatted = formatMillions(s.pipeCa || 0);
+            document.getElementById('kpi-pipe').innerText = pipeFormatted.includes('M') ? pipeFormatted + ' €' : (s.pipeCa || 0).toLocaleString('fr-FR') + ' €';
+
             document.getElementById('kpi-vol').innerText = s.vol.toLocaleString('fr-FR') + " m³";
             document.getElementById('kpi-count').innerHTML = s.total + ' <span class="text-sm font-normal text-slate-400">dossiers</span>';
             
@@ -382,17 +416,13 @@
         }
 
         function renderCharts(s) {
-            // 1. TENDANCE MENSUELLE MULTI-ANNÉES (Ligne - DYNAMIQUE)
             if (charts.trend) charts.trend.destroy();
             const ctxTrend = document.getElementById('trendChart').getContext('2d');
-            
             const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-            
-            // On récupère toutes les années trouvées, triées de la plus récente à la plus ancienne (ex: 2026, 2025)
-            const years = Object.keys(s.yearlyTrend).sort((a,b) => b - a);
             const datasets = [];
             
-            // Design : L'année courante en Cyan plein, les années précédentes en pointillé gris ou orange
+            // 1. COURBES DES VENTES RÉALISÉES
+            const years = Object.keys(s.yearlyTrend).sort((a,b) => b - a);
             const styleColors = [
                 { border: '#06b6d4', bg: 'rgba(6, 182, 212, 0.1)', dash: [] }, 
                 { border: '#cbd5e1', bg: 'transparent', dash: [5, 5] }, 
@@ -402,51 +432,78 @@
             years.forEach((year, index) => {
                 const style = styleColors[index % styleColors.length];
                 
-                // On trouve le dernier mois contenant des ventes pour couper la ligne et éviter qu'elle ne plonge à 0 dans le futur
+                // Coupe de la ligne pour ne pas qu'elle plonge à 0 dans le futur si on n'est qu'en Mars par ex
                 let lastNonZeroMonth = -1;
                 for (let i = 11; i >= 0; i--) {
-                    if (s.yearlyTrend[year][i] > 0) {
-                        lastNonZeroMonth = i;
-                        break;
-                    }
+                    if (s.yearlyTrend[year][i] > 0) { lastNonZeroMonth = i; break; }
                 }
 
-                // Formatage des données (en K€), on met 'null' pour le futur pour stopper le tracé
                 const dataInK = s.yearlyTrend[year].map((val, i) => {
-                    if (i > lastNonZeroMonth && index === 0) return null; // Coupe la ligne de l'année courante
+                    if (i > lastNonZeroMonth && index === 0) return null;
                     return parseFloat((val / 1000).toFixed(1));
                 });
 
                 datasets.push({
-                    label: year + ' (K€)',
+                    label: 'CA Clos ' + year,
                     data: dataInK,
                     borderColor: style.border,
                     backgroundColor: style.bg,
                     borderWidth: index === 0 ? 2 : 1.5,
                     borderDash: style.dash,
                     tension: 0.3,
-                    fill: index === 0, // Remplit uniquement la courbe la plus récente
+                    fill: index === 0,
                     pointRadius: index === 0 ? 3 : 0,
                     pointBackgroundColor: style.border,
                     spanGaps: true
                 });
             });
 
-            // Si aucune donnée de date trouvée, on affiche un graphique vide propre
+            // 2. COURBES DU PIPELINE (PRÉVISIONS FUTURES UNIQUEMENT)
+            const currentYearChart = new Date().getFullYear();
+            const pipeYears = Object.keys(s.yearlyPipeTrend)
+                .filter(year => parseInt(year) >= currentYearChart) // Filtre intelligent : ignore les années passées
+                .sort((a,b) => b - a);
+                
+            pipeYears.forEach((year, index) => {
+                // Pour le pipeline, on veut afficher les valeurs futures (ne pas couper au mois actuel)
+                let lastNonZeroMonth = -1;
+                for (let i = 11; i >= 0; i--) {
+                    if (s.yearlyPipeTrend[year][i] > 0) { lastNonZeroMonth = i; break; }
+                }
+
+                if (lastNonZeroMonth !== -1) {
+                    const pipeDataInK = s.yearlyPipeTrend[year].map((val, i) => {
+                        if (i > lastNonZeroMonth) return null; // Arrête la courbe après le dernier mois où on a du pipe
+                        return parseFloat((val / 1000).toFixed(1));
+                    });
+
+                    datasets.push({
+                        label: 'Prévision Pipe ' + year,
+                        data: pipeDataInK,
+                        borderColor: '#a855f7', // Violet
+                        backgroundColor: 'transparent',
+                        borderWidth: 2,
+                        borderDash: [4, 4], // Pointillés pour symboliser le futur
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: index === 0 ? 3 : 0,
+                        pointBackgroundColor: '#a855f7',
+                        spanGaps: true
+                    });
+                }
+            });
+
             if (datasets.length === 0) {
                 datasets.push({ label: 'Aucune donnée', data: Array(12).fill(0), borderColor: '#334155' });
             }
 
             charts.trend = new Chart(ctxTrend, {
                 type: 'line',
-                data: {
-                    labels: months,
-                    datasets: datasets
-                },
+                data: { labels: months, datasets: datasets },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { position: 'top', align: 'center', labels: { boxWidth: 15, usePointStyle: true } } },
+                    plugins: { legend: { position: 'top', align: 'center', labels: { boxWidth: 15, usePointStyle: true, color: '#cbd5e1' } } },
                     scales: {
                         y: { beginAtZero: true, ticks: { stepSize: 5 } },
                         x: { grid: { display: false } }
@@ -454,7 +511,7 @@
                 }
             });
 
-            // 2. TOP DESTINATIONS (Barres horizontales)
+            // 3. TOP DESTINATIONS
             if (charts.dest) charts.dest.destroy();
             const sortedDest = Object.entries(s.d).sort((a,b) => b[1]-a[1]).slice(0,5);
             const ctxDest = document.getElementById('destChart').getContext('2d');
@@ -486,7 +543,7 @@
                 }
             });
 
-            // 3. STATUT DES DOSSIERS (Doughnut)
+            // 4. STATUT DES DOSSIERS
             if (charts.status) charts.status.destroy();
             const ctxStatus = document.getElementById('statusChart').getContext('2d');
             charts.status = new Chart(ctxStatus, {
@@ -508,12 +565,22 @@
                         legend: { 
                             position: 'right', 
                             labels: { color: '#cbd5e1', font: { size: 11 }, usePointStyle: true, padding: 15 } 
-                        } 
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    let count = context.raw || 0;
+                                    let valFormatted = (s.statusValue[label] || 0).toLocaleString('fr-FR');
+                                    return `${label} : ${count} dossier(s) (${valFormatted} €)`;
+                                }
+                            }
+                        }
                     }
                 }
             });
 
-            // 4. TABLEAU DES COMMERCIAUX
+            // 5. TABLEAU DES COMMERCIAUX
             const tb = document.getElementById('sales-table');
             tb.innerHTML = "";
             const sortedComms = Object.entries(s.c).sort((a,b) => b[1].ca - a[1].ca);
@@ -548,18 +615,27 @@
             const demoData = {
                 ca: 2800000, 
                 vol: 11200, 
+                pipeCa: 1450000, 
                 win: 154, 
                 total: 375,
-                // On inclut ici une fausse évolution multi-années pour la démo
                 yearlyTrend: {
-                    2026: [1500000, 2100000, 800000, 1600000, 1200000, 1400000, 2200000, 2400000, 2600000, 0, 0, 0],
+                    2026: [1500000, 2100000, 800000, 1600000, 1200000, 1400000, 2200000, 0, 0, 0, 0, 0],
                     2025: [1200000, 1800000, 900000, 1400000, 1100000, 1300000, 2000000, 2100000, 2400000, 2000000, 2200000, 2500000]
+                },
+                yearlyPipeTrend: {
+                    2026: [0, 0, 0, 0, 0, 0, 400000, 650000, 300000, 800000, 500000, 0] // Prévision pour le futur (Aout, Sept, Oct...)
                 },
                 statuses: {
                     "Clos (Confirmés)": 154,
                     "Devis Envoyés": 120,
                     "En Négociation": 65,
                     "Annulés": 36
+                },
+                statusValue: {
+                    "Clos (Confirmés)": 2800000,
+                    "Devis Envoyés": 850000,
+                    "En Négociation": 600000,
+                    "Annulés": 420000
                 },
                 d: { 
                     "FRANCE": 20000, 
@@ -576,10 +652,6 @@
                 }
             };
             
-            document.getElementById('kpi-sales-sub').innerText = "+12.5% YoY";
-            document.getElementById('kpi-avg-sub').innerText = "+5%";
-            document.getElementById('kpi-vol-sub').innerText = "+8%";
-
             updateUI(demoData);
         }
 
