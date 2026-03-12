@@ -51,60 +51,90 @@
         </div>
     </header>
 
-    <!-- SECTION ANALYSE IA -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <!-- BILAN D'ACTIVITÉ + SYNTHÈSE IA -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+        <!-- BILAN ACTIVITÉ — 2/3 largeur -->
         <div class="lg:col-span-2 glass-panel rounded-2xl overflow-hidden glow-cyan">
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-800/20">
-                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Précision & Forecast IA</h3>
+                <div class="flex items-center space-x-2">
+                    <i data-lucide="bar-chart-2" class="w-4 h-4 text-cyan-400"></i>
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-300">Bilan d'Activité</h3>
+                </div>
                 <div class="flex space-x-1 bg-slate-900 p-1 rounded-lg border border-slate-700">
-                    <button id="btn-hebdo" onclick="switchBilan('hebdo')" class="px-4 py-1.5 text-[10px] font-bold rounded-md transition-all bg-blue-600 text-white shadow-lg">HEBDOMADAIRE</button>
+                    <button id="btn-hebdo" onclick="switchBilan('hebdo')" class="px-4 py-1.5 text-[10px] font-bold rounded-md transition-all bg-cyan-600 text-white shadow-lg">HEBDOMADAIRE</button>
                     <button id="btn-annuel" onclick="switchBilan('annuel')" class="px-4 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-white">ANNUEL (YTD)</button>
                 </div>
             </div>
-            <div class="p-6 h-[200px] overflow-y-auto">
-                <div id="bilan-content" class="text-slate-300 text-sm leading-relaxed space-y-4 pr-2">
-                    <div id="ai-loading-placeholder" class="space-y-3">
-                        <div class="h-4 w-3/4 loading-shimmer rounded opacity-50"></div>
-                        <div class="h-4 w-full loading-shimmer rounded opacity-30"></div>
-                        <p class="text-[11px] text-slate-500 italic">Connexion au serveur n8n en cours...</p>
+            <div class="p-6 min-h-[220px] max-h-[280px] overflow-y-auto">
+                <div id="bilan-content" class="pr-2">
+                    <div id="ai-loading-placeholder" class="space-y-3 pt-2">
+                        <div class="h-3 w-2/3 loading-shimmer rounded opacity-40"></div>
+                        <div class="h-3 w-full loading-shimmer rounded opacity-25"></div>
+                        <div class="h-3 w-4/5 loading-shimmer rounded opacity-20"></div>
+                        <p class="text-[11px] text-slate-500 italic pt-2">Analyse IA en cours de chargement...</p>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- SYNTHÈSE RAPIDE — 1/3 largeur -->
         <div class="glass-panel rounded-2xl glow-purple overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-800 bg-slate-800/20">
-                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Plan d'Action IA</h3>
+            <div class="px-5 py-4 border-b border-slate-800 bg-slate-800/20 flex items-center space-x-2">
+                <i data-lucide="zap" class="w-4 h-4 text-purple-400"></i>
+                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-300">Synthèse IA</h3>
             </div>
-            <div id="strat-plan" class="p-5 space-y-4 max-h-[440px] overflow-y-auto">
-                <p class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600">— Actions immédiates —</p>
+            <div class="p-5 space-y-3 max-h-[280px] overflow-y-auto">
                 <div class="flex items-start space-x-3">
-                    <div class="mt-1 p-1 bg-blue-500/20 rounded border border-blue-500/30 shrink-0"><i data-lucide="trending-up" class="w-3 h-3 text-blue-400"></i></div>
-                    <div><p class="text-[10px] font-bold text-blue-400 uppercase tracking-tight">Closing</p><p id="strat-devcom" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
-                </div>
-                <div class="flex items-start space-x-3">
-                    <div class="mt-1 p-1 bg-emerald-500/20 rounded border border-emerald-500/30 shrink-0"><i data-lucide="target" class="w-3 h-3 text-emerald-400"></i></div>
-                    <div><p class="text-[10px] font-bold text-emerald-400 uppercase tracking-tight">Leads & Pipe</p><p id="strat-leads" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
+                    <div class="mt-0.5 p-1.5 bg-cyan-500/20 rounded-lg border border-cyan-500/30 shrink-0"><i data-lucide="trending-up" class="w-3 h-3 text-cyan-400"></i></div>
+                    <div><p class="text-[9px] font-black text-cyan-400 uppercase tracking-widest">Closing</p><p id="strat-devcom" class="text-[11px] text-slate-300 leading-snug mt-0.5">Calcul...</p></div>
                 </div>
                 <div class="flex items-start space-x-3">
-                    <div class="mt-1 p-1 bg-purple-500/20 rounded border border-purple-500/30 shrink-0"><i data-lucide="globe" class="w-3 h-3 text-purple-400"></i></div>
-                    <div><p class="text-[10px] font-bold text-purple-400 uppercase tracking-tight">Visibilité</p><p id="strat-vis" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
+                    <div class="mt-0.5 p-1.5 bg-emerald-500/20 rounded-lg border border-emerald-500/30 shrink-0"><i data-lucide="target" class="w-3 h-3 text-emerald-400"></i></div>
+                    <div><p class="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Leads</p><p id="strat-leads" class="text-[11px] text-slate-300 leading-snug mt-0.5">Calcul...</p></div>
                 </div>
-                <div class="border-t border-slate-800 pt-4">
-                    <p class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600 mb-4">— Stratégie 3-6 mois —</p>
-                    <div class="flex items-start space-x-3 mb-4">
-                        <div class="mt-1 p-1 bg-orange-500/20 rounded border border-orange-500/30 shrink-0"><i data-lucide="briefcase" class="w-3 h-3 text-orange-400"></i></div>
-                        <div><p class="text-[10px] font-bold text-orange-400 uppercase tracking-tight">Stratégie Commerciale</p><p id="strat-commercial" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
-                    </div>
-                    <div class="flex items-start space-x-3 mb-4">
-                        <div class="mt-1 p-1 bg-pink-500/20 rounded border border-pink-500/30 shrink-0"><i data-lucide="megaphone" class="w-3 h-3 text-pink-400"></i></div>
-                        <div><p class="text-[10px] font-bold text-pink-400 uppercase tracking-tight">Stratégie Marketing</p><p id="strat-marketing" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
-                    </div>
-                    <div class="flex items-start space-x-3">
-                        <div class="mt-1 p-1 bg-yellow-500/20 rounded border border-yellow-500/30 shrink-0"><i data-lucide="radio" class="w-3 h-3 text-yellow-400"></i></div>
-                        <div><p class="text-[10px] font-bold text-yellow-400 uppercase tracking-tight">Communication & Notoriété</p><p id="strat-comm" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
-                    </div>
+                <div class="flex items-start space-x-3">
+                    <div class="mt-0.5 p-1.5 bg-purple-500/20 rounded-lg border border-purple-500/30 shrink-0"><i data-lucide="globe" class="w-3 h-3 text-purple-400"></i></div>
+                    <div><p class="text-[9px] font-black text-purple-400 uppercase tracking-widest">Visibilité</p><p id="strat-vis" class="text-[11px] text-slate-300 leading-snug mt-0.5">Calcul...</p></div>
                 </div>
+                <!-- Champs cachés pour compatibilité JS -->
+                <p id="strat-commercial" class="hidden"></p>
+                <p id="strat-marketing" class="hidden"></p>
+                <p id="strat-comm" class="hidden"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- BLOC 3 COLONNES STRATÉGIQUES -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        <!-- Dev. Commercial -->
+        <div class="glass-panel rounded-2xl overflow-hidden" style="border-top: 2px solid #06b6d4;">
+            <div class="px-5 py-3 bg-slate-800/30 border-b border-slate-800 flex items-center space-x-2">
+                <i data-lucide="briefcase" class="w-4 h-4 text-cyan-400"></i>
+                <h3 class="text-[11px] font-black uppercase tracking-wide text-white">Dev. Commercial <span class="text-cyan-400">(Upsell & Closing)</span></h3>
+            </div>
+            <div id="strat-col-commercial" class="p-4 space-y-3 min-h-[140px]">
+                <div class="flex items-start space-x-2"><i data-lucide="loader" class="w-3 h-3 text-slate-600 mt-0.5 animate-spin shrink-0"></i><p class="text-[11px] text-slate-500 italic">Analyse en cours...</p></div>
+            </div>
+        </div>
+        <!-- Génération Leads -->
+        <div class="glass-panel rounded-2xl overflow-hidden" style="border-top: 2px solid #10b981;">
+            <div class="px-5 py-3 bg-slate-800/30 border-b border-slate-800 flex items-center space-x-2">
+                <i data-lucide="users" class="w-4 h-4 text-emerald-400"></i>
+                <h3 class="text-[11px] font-black uppercase tracking-wide text-white">Génération de Leads <span class="text-emerald-400">(Inbound/Outbound)</span></h3>
+            </div>
+            <div id="strat-col-leads" class="p-4 space-y-3 min-h-[140px]">
+                <div class="flex items-start space-x-2"><i data-lucide="loader" class="w-3 h-3 text-slate-600 mt-0.5 animate-spin shrink-0"></i><p class="text-[11px] text-slate-500 italic">Analyse en cours...</p></div>
+            </div>
+        </div>
+        <!-- Visibilité & Notoriété -->
+        <div class="glass-panel rounded-2xl overflow-hidden" style="border-top: 2px solid #a855f7;">
+            <div class="px-5 py-3 bg-slate-800/30 border-b border-slate-800 flex items-center space-x-2">
+                <i data-lucide="radio" class="w-4 h-4 text-purple-400"></i>
+                <h3 class="text-[11px] font-black uppercase tracking-wide text-white">Visibilité & Notoriété <span class="text-purple-400">Marque</span></h3>
+            </div>
+            <div id="strat-col-visibilite" class="p-4 space-y-3 min-h-[140px]">
+                <div class="flex items-start space-x-2"><i data-lucide="loader" class="w-3 h-3 text-slate-600 mt-0.5 animate-spin shrink-0"></i><p class="text-[11px] text-slate-500 italic">Analyse en cours...</p></div>
             </div>
         </div>
     </div>
@@ -243,13 +273,48 @@
             document.getElementById('ai-ping').className = `absolute inline-flex h-full w-full rounded-full ${colors[color][1]}`;
         }
 
+        function renderBullets(containerId, text, accentColor, iconName) {
+            if (!text || text === 'N/A' || text === '—') {
+                document.getElementById(containerId).innerHTML = `<p class="text-[11px] text-slate-500 italic">Données non disponibles.</p>`;
+                return;
+            }
+            // Split on "|| " or newlines or ". " when followed by capital letter
+            const bullets = text.split(/\|\||\.\s(?=[A-ZÀÂÉÈÊÎÔÙ])|\n+/)
+                .map(s => s.trim().replace(/^[•\-–]\s*/, ''))
+                .filter(s => s.length > 8);
+            const accents = { cyan: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20', emerald: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', purple: 'text-purple-400 bg-purple-500/10 border-purple-500/20' };
+            const iconMap = { cyan: ['check-circle','arrow-up-right','star'], emerald: ['user-plus','send','crosshair'], purple: ['megaphone','globe','eye'] };
+            const style = accents[accentColor] || accents.cyan;
+            const icons = iconMap[accentColor] || iconMap.cyan;
+            const html = bullets.map((b, i) => {
+                const colonIdx = b.indexOf(' : ');
+                let label = '', rest = b;
+                if (colonIdx > 0 && colonIdx < 45) { label = b.substring(0, colonIdx); rest = b.substring(colonIdx + 3); }
+                return `<div class="flex items-start space-x-2.5 pb-3 border-b border-slate-800/50 last:border-0 last:pb-0">
+                    <div class="mt-0.5 p-1 rounded border ${style} shrink-0"><i data-lucide="${icons[i % icons.length]}" class="w-3 h-3 ${style.split(' ')[0]}"></i></div>
+                    <div class="text-[11px] leading-snug">${label ? `<span class="font-bold text-slate-200">${label}</span><span class="text-slate-400"> : ${rest}</span>` : `<span class="text-slate-300">${rest}</span>`}</div>
+                </div>`;
+            }).join('');
+            document.getElementById(containerId).innerHTML = html;
+            lucide.createIcons();
+        }
+
         function setStratFields(data) {
+            // Synthèse rapide (panel droit)
             document.getElementById('strat-devcom').innerText = data.devCom || "N/A";
             document.getElementById('strat-leads').innerText = data.leads || "N/A";
             document.getElementById('strat-vis').innerText = data.visibilite || "N/A";
             document.getElementById('strat-commercial').innerText = data.stratCommerciale || "N/A";
             document.getElementById('strat-marketing').innerText = data.stratMarketing || "N/A";
             document.getElementById('strat-comm').innerText = data.stratComm || "N/A";
+            // Colonnes stratégiques 3 blocs
+            // Combine closing + stratCommerciale pour col 1
+            const comText = [data.devCom, data.stratCommerciale].filter(x => x && x !== 'N/A' && x !== '—').join(' || ');
+            const leadsText = [data.leads, data.stratMarketing].filter(x => x && x !== 'N/A' && x !== '—').join(' || ');
+            const visText = [data.visibilite, data.stratComm].filter(x => x && x !== 'N/A' && x !== '—').join(' || ');
+            renderBullets('strat-col-commercial', comText, 'cyan', 'briefcase');
+            renderBullets('strat-col-leads', leadsText, 'emerald', 'users');
+            renderBullets('strat-col-visibilite', visText, 'purple', 'radio');
         }
 
         function showRetryButton() {
@@ -309,9 +374,27 @@
 
         function switchBilan(type) {
             activeBilan = type;
-            document.getElementById('btn-hebdo').className = type === 'hebdo' ? 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all bg-blue-600 text-white shadow-lg' : 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-white';
-            document.getElementById('btn-annuel').className = type === 'annuel' ? 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all bg-blue-600 text-white shadow-lg' : 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-white';
-            document.getElementById('bilan-content').innerHTML = `<p class="text-slate-300 italic">${aiReports[type]}</p>`;
+            const btnBase = 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all';
+            document.getElementById('btn-hebdo').className = type === 'hebdo' ? `${btnBase} bg-cyan-600 text-white shadow-lg` : `${btnBase} text-slate-500 hover:text-white`;
+            document.getElementById('btn-annuel').className = type === 'annuel' ? `${btnBase} bg-cyan-600 text-white shadow-lg` : `${btnBase} text-slate-500 hover:text-white`;
+            const text = aiReports[type] || '';
+            // Render as structured paragraphs with styled sentences
+            const sentences = text.split(/(?<=\.\s)|(?<=\!\s)|\n+/).map(s => s.trim()).filter(s => s.length > 5);
+            const icons = ['📊','📈','⚠️','💡','🎯','📉','✅','🔍'];
+            const rendered = sentences.map((s, i) => {
+                // Detect if sentence has a "Label : value" pattern
+                const colonIdx = s.indexOf(' : ');
+                if (colonIdx > 0 && colonIdx < 40) {
+                    const label = s.substring(0, colonIdx);
+                    const rest = s.substring(colonIdx + 3);
+                    return `<div class="flex items-start space-x-3 py-2 border-b border-slate-800/50 last:border-0">
+                        <span class="text-base shrink-0">${icons[i % icons.length]}</span>
+                        <div><span class="text-[11px] font-bold text-slate-200">${label}</span><span class="text-[11px] text-slate-400"> : ${rest}</span></div>
+                    </div>`;
+                }
+                return `<p class="text-[12px] text-slate-300 leading-relaxed py-1.5 border-b border-slate-800/40 last:border-0">${s}</p>`;
+            }).join('');
+            document.getElementById('bilan-content').innerHTML = rendered || `<p class="text-slate-500 italic text-[11px]">Données en attente...</p>`;
         }
 
         async function init() {
