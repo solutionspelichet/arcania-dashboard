@@ -458,24 +458,24 @@
                 const sDays = new Date(now.getTime() - 7*24*60*60*1000);
 
                 lines.slice(1).forEach(l => {
-                    const c = l.split(',');
-                    const statut  = (c[4]||"").toLowerCase();
-                    const val     = parseFloat(c[5])||0;
-                    const marge   = parseFloat(c[8])||0;   // col 8 = Marge_HT (nouveau schema)
-                    const tauxM   = parseFloat(c[9])||0;   // col 9 = Taux_Marge_Pct
-                    const vol     = parseFloat(c[10])||0;  // col 10 = Volume_m3
-                    const name    = c[3]||"Inconnu";
-                    const seg     = (c[5+1]||"").toLowerCase(); // col 6 = Segment (après Statut)
-                    // Recalcul index avec nouveau schéma: 0=ID,1=DateCrea,2=DateSign,3=Comm,4=Statut,5=Segment,6=TypeClient,7=Montant,8=Marge,9=TauxMarge,10=Volume,11=Orig,12=Dest
-                    const valN    = parseFloat(c[7])||0;
-                    const margeN  = parseFloat(c[8])||0;
-                    const tauxN   = parseFloat(c[9])||0;
-                    const volN    = parseFloat(c[10])||0;
-                    const segRaw  = (c[5]||"particulier").toLowerCase();
-                    const typeC   = (c[6]||"nouveau").toLowerCase();
-                    const dest    = (c[12]||"AUTRE").toUpperCase();
-                    const dSig    = new Date(c[2]);
-                    const segKey  = segRaw.includes("manut") ? "manutention" : segRaw.includes("pro") ? "professionnel" : "particulier";
+                    // Schéma : 0=ID_Dossier, 1=Date_Creation, 2=Date_Signature, 3=Commercial
+                    //          4=Statut_Dossier, 5=Segment, 6=Type_Client, 7=Montant_HT
+                    //          8=Marge_HT, 9=Taux_Marge_Pct, 10=Volume_m3
+                    //          11=Origine_Pays, 12=Destination_Pays, 13=Notes
+                    const c = l.match(/("(?:[^"]|"")*"|[^,]*)/g).map(v => v.replace(/^"|"$/g,'').replace(/""/g,'"').trim());
+                    const statut     = (c[4]||"").toLowerCase();
+                    const montant    = parseFloat(c[7])||0;
+                    const marge      = parseFloat(c[8])||0;
+                    const tauxM      = parseFloat(c[9])||0;
+                    const vol        = parseFloat(c[10])||0;
+                    const commercial = c[3]||"Inconnu";
+                    const segRaw     = (c[5]||"particulier").toLowerCase();
+                    const typeC      = (c[6]||"nouveau").toLowerCase();
+                    const dest       = (c[12]||"AUTRE").toUpperCase();
+                    const dSig       = new Date(c[2]);
+                    const segKey     = segRaw.includes("manut") ? "manutention" : segRaw.includes("pro") ? "professionnel" : "particulier";
+                    // Alias pour compatibilité avec le code d'agrégation ci-dessous
+                    const valN = montant, margeN = marge, tauxN = tauxM, volN = vol, name = commercial;
 
                     data.stats.total++;
                     data.segs[segKey].total++;
@@ -512,7 +512,7 @@
                 });
 
                 const tauxMargeMoyen = data.stats.countTaux > 0 ? Math.round(data.stats.sumTaux / data.stats.countTaux) : 0;
-                const summary = { ca: data.stats.ca, marge: data.stats.marge, tauxMarge: tauxMargeMoyen, caWow: data.wow.ca, pipe: data.stats.pipe, pipeWow: data.wow.pipe, winRate: Math.round((data.stats.win/data.stats.total)*100), avgVal: Math.round(data.stats.ca/data.stats.win) || 0, vol: data.stats.vol, count: data.stats.win, monthlyForecast: data.fore26.map(v => Math.round(v/1000)), segs: data.segs, clients: data.clients };
+                const summary = { ca: data.stats.ca, marge: data.stats.marge, tauxMarge: tauxMargeMoyen, caWow: data.wow.ca, pipe: data.stats.pipe, pipeWow: data.wow.pipe, winRate: Math.round((data.stats.win/data.stats.total)*100), avgVal: Math.round(data.stats.ca/data.stats.win) || 0, vol: data.stats.vol, count: data.stats.win, monthlyForecast: data.fore26.map(v => Math.round(v/1000)), segs: data.segs, clients: data.clients , comms: data.comms };
                 updateUI(data, summary);
                 
                 const analysis = await fetchAnalysisFromN8N(summary);
