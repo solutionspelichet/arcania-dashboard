@@ -566,10 +566,30 @@
                     if (data.comms[commercial]) data.comms[commercial].total++;
                 }); // fin forEach
 
-                console.log('=== ARCANIA DEBUG ===');
-                console.log('Total lignes:', data.stats.total, '| Gagnés:', data.stats.win, '| CA:', data.stats.ca);
-                console.log('Segments:', JSON.stringify(data.segs));
-                console.log('Headers détectés:', idx);
+                // ════ DIAGNOSTIC COMPLET ════
+                console.group('%c ARCANIA DASHBOARD DEBUG', 'color:#06b6d4;font-weight:bold;font-size:14px');
+                console.log('📋 Lignes CSV totales (incl. header):', lines.length);
+                console.log('📋 Header brut ligne 0:', lines[0]);
+                console.log('📋 Headers parsés:', headers);
+                console.log('📋 Index colonnes:', idx);
+                console.log('📋 Ligne 1 brute:', lines[1] || 'VIDE');
+                // Parser la ligne 1 pour vérification
+                if (lines[1]) {
+                    const t = (lines[1].match(/("(?:[^"]|"")*"|[^,\r\n]*)/g)||lines[1].split(','))
+                               .map(v => String(v).replace(/^"|"$/g,'').trim());
+                    console.log('📋 Ligne 1 parsée:', t);
+                    console.log('  → statut['+idx.statut+']:', t[idx.statut]);
+                    console.log('  → montant['+idx.montant+']:', t[idx.montant]);
+                    console.log('  → segment['+idx.segment+']:', t[idx.segment]);
+                    const s = (t[idx.statut]||'').toLowerCase();
+                    console.log('  → isGagne?', s.includes('gagn')||s==='d');
+                }
+                console.log('📊 Résultats:', {
+                    total: data.stats.total, gagnes: data.stats.win,
+                    ca: data.stats.ca, marge: data.stats.marge,
+                    pipe: data.stats.pipe
+                });
+                console.groupEnd();
 
                 const tauxMargeMoyen = data.stats.countTaux > 0
                     ? Math.round(data.stats.sumTaux / data.stats.countTaux) : 0;
