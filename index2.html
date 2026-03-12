@@ -66,13 +66,14 @@
                     <button id="btn-annuel" onclick="switchBilan('annuel')" class="px-4 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-white">ANNUEL (YTD)</button>
                 </div>
             </div>
-            <div class="p-6 min-h-[220px] max-h-[280px] overflow-y-auto">
+            <div class="p-6 min-h-[260px] max-h-[340px] overflow-y-auto">
                 <div id="bilan-content" class="pr-2">
                     <div id="ai-loading-placeholder" class="space-y-3 pt-2">
                         <div class="h-3 w-2/3 loading-shimmer rounded opacity-40"></div>
                         <div class="h-3 w-full loading-shimmer rounded opacity-25"></div>
                         <div class="h-3 w-4/5 loading-shimmer rounded opacity-20"></div>
-                        <p class="text-[11px] text-slate-500 italic pt-2">Analyse IA en cours de chargement...</p>
+                        <div class="h-3 w-3/5 loading-shimmer rounded opacity-15"></div>
+                        <p class="text-[11px] text-slate-500 italic pt-2">Analyse CCO en cours de chargement...</p>
                     </div>
                 </div>
             </div>
@@ -372,29 +373,66 @@
             }
         }
 
+        // Icon mapping by label keywords
+        const LABEL_ICONS = {
+            'dynamique': { icon: '📈', color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/30' },
+            'segment moteur': { icon: '🚀', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
+            'point de vigilance': { icon: '⚠️', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
+            'alerte': { icon: '🔴', color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/30' },
+            'pipeline': { icon: '🔵', color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/30' },
+            'rentabilité': { icon: '💰', color: 'text-lime-400', bg: 'bg-lime-500/10 border-lime-500/30' },
+            'trajectoire': { icon: '📊', color: 'text-cyan-400', bg: 'bg-cyan-500/10 border-cyan-500/30' },
+            'analyse segments': { icon: '🗂️', color: 'text-purple-400', bg: 'bg-purple-500/10 border-purple-500/30' },
+            'conversion': { icon: '🎯', color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/30' },
+            'acquisition': { icon: '🆕', color: 'text-sky-400', bg: 'bg-sky-500/10 border-sky-500/30' },
+            'risque': { icon: '⚠️', color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/30' },
+            'forecast': { icon: '🔭', color: 'text-indigo-400', bg: 'bg-indigo-500/10 border-indigo-500/30' },
+        };
+
+        function getLabelStyle(label) {
+            const lw = label.toLowerCase();
+            for (const [key, val] of Object.entries(LABEL_ICONS)) {
+                if (lw.includes(key)) return val;
+            }
+            return { icon: '💡', color: 'text-slate-300', bg: 'bg-slate-700/30 border-slate-600/30' };
+        }
+
         function switchBilan(type) {
             activeBilan = type;
             const btnBase = 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all';
             document.getElementById('btn-hebdo').className = type === 'hebdo' ? `${btnBase} bg-cyan-600 text-white shadow-lg` : `${btnBase} text-slate-500 hover:text-white`;
             document.getElementById('btn-annuel').className = type === 'annuel' ? `${btnBase} bg-cyan-600 text-white shadow-lg` : `${btnBase} text-slate-500 hover:text-white`;
             const text = aiReports[type] || '';
-            // Render as structured paragraphs with styled sentences
-            const sentences = text.split(/(?<=\.\s)|(?<=\!\s)|\n+/).map(s => s.trim()).filter(s => s.length > 5);
-            const icons = ['📊','📈','⚠️','💡','🎯','📉','✅','🔍'];
-            const rendered = sentences.map((s, i) => {
-                // Detect if sentence has a "Label : value" pattern
+            if (!text || text === 'En attente...' || text === 'N/A') {
+                document.getElementById('bilan-content').innerHTML = `<p class="text-slate-500 italic text-[11px] pt-2">Analyse CCO en attente des données...</p>`;
+                return;
+            }
+            // Split on "Label : texte." pattern — each sentence is a KPI line
+            const sentences = text.split(/\.\s+(?=[A-ZÀÂÉÈÊÎÔÙ])|\.\s*$|\n+/)
+                .map(s => s.trim().replace(/^[•\-–]\s*/, ''))
+                .filter(s => s.length > 10);
+
+            const rendered = sentences.map((s) => {
                 const colonIdx = s.indexOf(' : ');
-                if (colonIdx > 0 && colonIdx < 40) {
-                    const label = s.substring(0, colonIdx);
-                    const rest = s.substring(colonIdx + 3);
-                    return `<div class="flex items-start space-x-3 py-2 border-b border-slate-800/50 last:border-0">
-                        <span class="text-base shrink-0">${icons[i % icons.length]}</span>
-                        <div><span class="text-[11px] font-bold text-slate-200">${label}</span><span class="text-[11px] text-slate-400"> : ${rest}</span></div>
+                if (colonIdx > 0 && colonIdx < 50) {
+                    const label = s.substring(0, colonIdx).trim();
+                    const rest = s.substring(colonIdx + 3).trim();
+                    const style = getLabelStyle(label);
+                    // Highlight CHF amounts in text
+                    const highlightedRest = rest.replace(/(\d[\d\s]*(?:CHF|%|chf))/g, '<span class="font-bold text-white">$1</span>');
+                    return `<div class="flex items-start space-x-3 py-2.5 border-b border-slate-800/60 last:border-0">
+                        <div class="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg border ${style.bg} text-base">${style.icon}</div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[10px] font-black uppercase tracking-wide ${style.color} mb-0.5">${label}</p>
+                            <p class="text-[12px] text-slate-300 leading-relaxed">${highlightedRest}</p>
+                        </div>
                     </div>`;
                 }
-                return `<p class="text-[12px] text-slate-300 leading-relaxed py-1.5 border-b border-slate-800/40 last:border-0">${s}</p>`;
+                // Fallback: plain paragraph
+                const highlighted = s.replace(/(\d[\d\s]*(?:CHF|%|chf))/g, '<span class="font-bold text-white">$1</span>');
+                return `<p class="text-[12px] text-slate-300 leading-relaxed py-2 border-b border-slate-800/40 last:border-0">${highlighted}</p>`;
             }).join('');
-            document.getElementById('bilan-content').innerHTML = rendered || `<p class="text-slate-500 italic text-[11px]">Données en attente...</p>`;
+            document.getElementById('bilan-content').innerHTML = rendered;
         }
 
         async function init() {
