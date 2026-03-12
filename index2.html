@@ -810,11 +810,23 @@
                 // ── Boucle principale ──
                 lines.slice(1).forEach(l => {
                     if (!l.trim()) return;
-                    let c;
-                    try {
-                        c = (l.match(/("(?:[^"]|"")*"|[^,\r\n]*)/g) || l.split(','))
-                             .map(v => String(v).replace(/^"|"$/g,'').replace(/""/g,'"').trim());
-                    } catch(e) { c = l.split(','); }
+                    // Parser CSV robuste (gère les guillemets, pas de doublon vide)
+                    const c = (function parseCsvLine(line) {
+                        const res = []; let cur = ''; let inQ = false;
+                        for (let i = 0; i < line.length; i++) {
+                            const ch = line[i];
+                            if (ch === '"') {
+                                if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+                                else { inQ = !inQ; }
+                            } else if (ch === ',' && !inQ) {
+                                res.push(cur.trim()); cur = '';
+                            } else if (ch !== '\r') {
+                                cur += ch;
+                            }
+                        }
+                        res.push(cur.trim());
+                        return res;
+                    })(l);
                     if (c.length < 5) return; // ligne invalide
 
                     const statut     = (c[idx.statut]     || "").toLowerCase();
@@ -893,8 +905,14 @@
                 console.log('📋 Ligne 1 brute:', lines[1] || 'VIDE');
                 // Parser la ligne 1 pour vérification
                 if (lines[1]) {
-                    const t = (lines[1].match(/("(?:[^"]|"")*"|[^,\r\n]*)/g)||lines[1].split(','))
-                               .map(v => String(v).replace(/^"|"$/g,'').trim());
+                    const t = (function(line) {
+                            const res=[]; let cur=''; let inQ=false;
+                            for(let i=0;i<line.length;i++){const ch=line[i];
+                                if(ch==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+                                else if(ch===','&&!inQ){res.push(cur.trim());cur='';}
+                                else if(ch!=='\r'){cur+=ch;}}
+                            res.push(cur.trim());return res;
+                        })(lines[1]);
                     console.log('📋 Ligne 1 parsée:', t);
                     console.log('  → statut['+idx.statut+']:', t[idx.statut]);
                     console.log('  → montant['+idx.montant+']:', t[idx.montant]);
