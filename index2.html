@@ -159,7 +159,6 @@
 
     <script>
         // CONFIGURATION PRODUCTION
-        // IMPORTANT : Remplacez par votre URL de production n8n (ex: https://votre-n8n.com/webhook/...)
         const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbuJa036t_m_LhDX5RXHBNPexD9jKcR54qlGFKA-wzxwuUS67TOdYk8euyhlXAspySvKaf8-kUmI6I/pub?gid=0&single=true&output=csv';
         const N8N_WEBHOOK_URL = 'https://n8n.guedou.com/webhook-test/arcania-dashboard-analysis'; 
 
@@ -167,15 +166,13 @@
         let activeBilan = 'hebdo';
 
         async function fetchAnalysisFromN8N(summary) {
-            // Sécurité : Vérifier si l'URL est toujours le placeholder
             if (!N8N_WEBHOOK_URL || N8N_WEBHOOK_URL.includes('VOTRE_URL_WEBHOOK_N8N_ICI')) {
-                console.warn("L'URL du Webhook n8n n'est pas configurée.");
                 return {
-                    hebdo: "⚠️ Configuration requise : Veuillez renseigner l'URL de votre Webhook n8n dans le code source pour activer l'analyse IA.",
+                    hebdo: "⚠️ Configuration requise : Veuillez renseigner l'URL de votre Webhook n8n à la ligne 159 du code.",
                     annuel: "L'analyse annuelle nécessite la configuration du Webhook n8n.",
-                    devCom: "Configurer n8n",
-                    leads: "Vérifier l'URL",
-                    visibilite: "Mode déconnecté"
+                    devCom: "Non configuré",
+                    leads: "Non configuré",
+                    visibilite: "Non configuré"
                 };
             }
 
@@ -186,16 +183,16 @@
                     body: JSON.stringify(summary)
                 });
                 
-                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
                 return await response.json();
             } catch (e) {
                 console.error("n8n Proxy Error", e);
                 return {
-                    hebdo: "❌ Erreur de connexion avec n8n. Vérifiez que votre workflow est actif et que l'URL est correcte.",
+                    hebdo: "❌ Erreur de connexion avec n8n. Vérifiez que le workflow est 'Active' et que l'URL est correcte.",
                     annuel: "Connexion impossible.",
                     devCom: "Erreur n8n",
                     leads: "Erreur n8n",
-                    visibilite: "Vérifiez l'URL"
+                    visibilite: "Vérifier URL"
                 };
             }
         }
@@ -217,7 +214,8 @@
                 let data = {
                     rev25: Array(12).fill(0), rev26: Array(12).fill(0), fore26: Array(12).fill(0),
                     dests: {}, comms: {}, stats: { ca: 0, pipe: 0, vol: 0, win: 0, total: 0 },
-                    wow: { ca: 0, pipe: 0 }
+                    wow: { ca: 0, pipe: 0 },
+                    upcoming: []
                 };
 
                 const now = new Date();
@@ -246,9 +244,15 @@
                         data.stats.pipe += val;
                         if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, win: 0, total: 0 };
                         data.comms[name].pipe += val;
+                        
                         let fDate = isNaN(dSig.getTime()) ? now : dSig;
                         if (fDate.getFullYear() === 2026) data.fore26[fDate.getMonth()] += val;
                         data.wow.pipe += val;
+
+                        // Capture des dates pour le timing IA
+                        if (!isNaN(dSig.getTime()) && dSig > now) {
+                            data.upcoming.push(dSig.toLocaleDateString('fr-FR'));
+                        }
                     }
                     if (data.comms[name]) data.comms[name].total++;
                     data.stats.total++;
@@ -257,11 +261,13 @@
                 const summary = {
                     ca: data.stats.ca, caWow: data.wow.ca,
                     pipe: data.stats.pipe, pipeWow: data.wow.pipe,
+                    forecastValue: Math.round(data.stats.pipe * 0.7),
                     winRate: Math.round((data.stats.win/data.stats.total)*100),
                     avgVal: Math.round(data.stats.ca/data.stats.win) || 0,
                     topDest: Object.entries(data.dests).sort((a,b)=>b[1]-a[1])[0]?.[0] || "N/A",
                     vol: data.stats.vol, count: data.stats.win,
-                    monthlyForecast: data.fore26.map(v => Math.round(v/1000))
+                    monthlyForecast: data.fore26.map(v => Math.round(v/1000)),
+                    upcomingDates: data.upcoming.slice(0, 5).join(', ') || "N/A"
                 };
 
                 updateUI(data, summary);
@@ -283,7 +289,6 @@
 
             } catch (err) { 
                 console.error("Initialization Error:", err);
-                document.getElementById('bilan-content').innerHTML = `<p class="text-red-400">Erreur lors de la lecture du Google Sheet. Vérifiez la connexion.</p>`;
             }
         }
 
