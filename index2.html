@@ -46,6 +46,7 @@
                     <span id="ai-dot" class="relative inline-flex rounded-full h-2 w-2 bg-slate-500"></span>
                 </span>
                 <span id="ai-status" class="text-[10px] font-bold text-slate-300 uppercase tracking-tighter">Initialisation...</span>
+                <span id="ai-timer" class="text-[10px] text-slate-500 font-mono ml-1 hidden">0s</span>
             </div>
             <p id="last-update" class="text-[10px] text-slate-500 font-mono italic uppercase">Lecture des données...</p>
         </div>
@@ -267,11 +268,22 @@
 
         let _lastSummary = null;
 
-        function setAiStatus(status, color) {
+        let _timerInterval = null;
+        function setAiStatus(status, color, showTimer = false) {
             const colors = { blue: ['bg-blue-500', 'bg-blue-400 opacity-75 animate-ping'], emerald: ['bg-emerald-500', 'bg-emerald-400 opacity-75'], orange: ['bg-orange-500', 'bg-orange-400 opacity-75'], red: ['bg-red-500', 'bg-red-400 opacity-75'] };
             document.getElementById('ai-status').innerText = status;
             document.getElementById('ai-dot').className = `relative inline-flex rounded-full h-2 w-2 ${colors[color][0]}`;
             document.getElementById('ai-ping').className = `absolute inline-flex h-full w-full rounded-full ${colors[color][1]}`;
+            const timerEl = document.getElementById('ai-timer');
+            if (_timerInterval) { clearInterval(_timerInterval); _timerInterval = null; }
+            if (showTimer) {
+                let secs = 0;
+                timerEl.classList.remove('hidden');
+                timerEl.innerText = '0s';
+                _timerInterval = setInterval(() => { secs++; timerEl.innerText = secs + 's'; }, 1000);
+            } else {
+                timerEl.classList.add('hidden');
+            }
         }
 
         function renderBullets(containerId, text, accentColor, iconName) {
@@ -337,9 +349,9 @@
 
         async function fetchAnalysisFromN8N(summary) {
             _lastSummary = summary;
-            const TIMEOUT_MS = 25000;
+            const TIMEOUT_MS = 90000;
             try {
-                setAiStatus("Appel n8n...", "blue");
+                setAiStatus("Analyse CCO...", "blue", true);
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
                 let response;
@@ -348,8 +360,8 @@
                 } catch (fetchErr) {
                     clearTimeout(timeoutId);
                     if (fetchErr.name === 'AbortError') {
-                        setAiStatus("TIMEOUT (25s)", "red");
-                        const e = { hebdo: "⏱️ <b>TIMEOUT</b> : n8n n'a pas répondu en 25s.", annuel: "Vérifiez que le workflow est actif.", devCom:"—",leads:"—",visibilite:"—",stratCommerciale:"—",stratMarketing:"—",stratComm:"—" };
+                        setAiStatus("TIMEOUT", "red", false);
+                        const e = { hebdo: "⏱️ <b>TIMEOUT</b> : n8n n'a pas répondu en 90s.", annuel: "Vérifiez que le workflow est actif.", devCom:"—",leads:"—",visibilite:"—",stratCommerciale:"—",stratMarketing:"—",stratComm:"—" };
                         aiReports = { hebdo: e.hebdo, annuel: e.annuel }; setStratFields(e); switchBilan(activeBilan); showRetryButton(); return null;
                     }
                     throw fetchErr;
@@ -358,16 +370,16 @@
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const rawResult = await response.json();
                 if (rawResult && rawResult.message === "Workflow was started") {
-                    setAiStatus("CONFIG REQUIS", "orange");
+                    setAiStatus("CONFIG REQUIS", "orange", false);
                     return { hebdo: "⚠️ Webhook en mode Respond immediately. Passez en Last Node.", annuel: "—", devCom:"—",leads:"—",visibilite:"—",stratCommerciale:"—",stratMarketing:"—",stratComm:"—" };
                 }
                 const data = findStrategicData(rawResult);
-                if (data && (data.hebdo || data.annuel)) { setAiStatus("IA ACTIVE ✓", "emerald"); return data; }
+                if (data && (data.hebdo || data.annuel)) { setAiStatus("CCO ACTIF ✓", "emerald", false); return data; }
                 console.warn("Réponse inattendue:", JSON.stringify(rawResult));
                 throw new Error(`Format inattendu`);
             } catch (e) {
                 console.error("n8n Error:", e);
-                setAiStatus("IA BLOQUÉE", "red");
+                setAiStatus("ERREUR", "red", false);
                 const err = { hebdo: `❌ <b>ERREUR :</b> ${e.message}`, annuel: "Consultez F12.", devCom:"—",leads:"—",visibilite:"—",stratCommerciale:"—",stratMarketing:"—",stratComm:"—" };
                 aiReports = { hebdo: err.hebdo, annuel: err.annuel }; setStratFields(err); switchBilan(activeBilan); showRetryButton(); return null;
             }
