@@ -225,6 +225,7 @@
     </div>
 
     <script>
+        const CURRENT_YEAR = new Date().getFullYear(); // Ex: 2026
         const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbuJa036t_m_LhDX5RXHBNPexD9jKcR54qlGFKA-wzxwuUS67TOdYk8euyhlXAspySvKaf8-kUmI6I/pub?gid=0&single=true&output=csv';
         const N8N_WEBHOOK_URL = 'https://n8n.guedou.com/webhook/arcania-dashboard-analysis'; 
 
@@ -805,7 +806,6 @@
                     dateSig:    col(['date_signature','etu_dtemission']),
                     dateCrea:   col(['date_creation','etu_dtdevis']),
                 };
-                const CURRENT_YEAR = new Date().getFullYear(); // 2026
                 console.log('Headers:', headers);
                 console.log('Index détectés:', idx);
 
@@ -917,36 +917,7 @@
                     if (data.comms[commercial]) data.comms[commercial].total++;
                 }); // fin forEach
 
-                // ════ DIAGNOSTIC COMPLET ════
-                console.group('%c ARCANIA DASHBOARD DEBUG', 'color:#06b6d4;font-weight:bold;font-size:14px');
-                console.log('📋 Lignes CSV totales (incl. header):', lines.length);
-                console.log('📋 Header brut ligne 0:', lines[0]);
-                console.log('📋 Headers parsés:', headers);
-                console.log('📋 Index colonnes:', idx);
-                console.log('📋 Ligne 1 brute:', lines[1] || 'VIDE');
-                // Parser la ligne 1 pour vérification
-                if (lines[1]) {
-                    const t = (function(line) {
-                            const res=[]; let cur=''; let inQ=false;
-                            for(let i=0;i<line.length;i++){const ch=line[i];
-                                if(ch==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
-                                else if(ch===','&&!inQ){res.push(cur.trim());cur='';}
-                                else if(ch!=='\r'){cur+=ch;}}
-                            res.push(cur.trim());return res;
-                        })(lines[1]);
-                    console.log('📋 Ligne 1 parsée:', t);
-                    console.log('  → statut['+idx.statut+']:', t[idx.statut]);
-                    console.log('  → montant['+idx.montant+']:', t[idx.montant]);
-                    console.log('  → segment['+idx.segment+']:', t[idx.segment]);
-                    const s = (t[idx.statut]||'').toLowerCase();
-                    console.log('  → isGagne?', s.includes('gagn')||s==='d');
-                }
-                console.log('📊 Résultats:', {
-                    total: data.stats.total, gagnes: data.stats.win,
-                    ca: data.stats.ca, marge: data.stats.marge,
-                    pipe: data.stats.pipe
-                });
-                console.groupEnd();
+                console.log('✅ Data loaded — YTD:', data.stats.win, 'won /', data.stats.totalYTD, 'total | CA:', data.stats.ca, 'CHF | Pipe:', data.stats.pipe, 'CHF');
 
                 const tauxMargeMoyen = data.stats.countTaux > 0
                     ? Math.round(data.stats.sumTaux / data.stats.countTaux) : 0;
@@ -973,7 +944,10 @@
         }
 
         function updateUI(data, s) {
-            const fmt = v => v.toLocaleString('fr-CH') + ' CHF';
+            const fmt = v => (v || 0).toLocaleString('fr-CH') + ' CHF';
+            // Sécuriser toutes les valeurs
+            s = s || {};
+            const safe = (v, d=0) => (v !== undefined && v !== null && !isNaN(v)) ? v : d;
             document.getElementById('kpi-ca').innerText = fmt(s.ca);
             document.getElementById('kpi-ca-comp').innerText = `+${s.caWow.toLocaleString()} CHF vs S-1`;
             document.getElementById('kpi-marge').innerText = fmt(s.marge);
@@ -1009,7 +983,7 @@
             document.getElementById('new-pct').innerText = newPct + '%';
             document.getElementById('new-bar').style.width = newPct + '%';
             // Team table
-            document.getElementById('team-table').innerHTML = Object.entries(data.comms).sort((a,b)=>b[1].ca-a[1].ca).map(([n, st]) => `<tr class="border-b border-slate-800/50 hover:bg-slate-800/20"><td class="py-2 font-bold">${n}</td><td class="py-2 text-right text-cyan-400 font-mono">${st.ca.toLocaleString()} CHF</td><td class="py-2 text-right text-slate-400 font-mono">${st.pipe.toLocaleString()} CHF</td><td class="py-2 text-right font-bold text-emerald-500">${Math.round((st.win/st.total)*100)} %</td></tr>`).join('');
+            const teamEl = document.getElementById('team-table'); if(teamEl) teamEl.innerHTML = Object.entries(data.comms || {}).sort((a,b)=>b[1].ca-a[1].ca).map(([n, st]) => `<tr class="border-b border-slate-800/50 hover:bg-slate-800/20"><td class="py-2 font-bold">${n}</td><td class="py-2 text-right text-cyan-400 font-mono">${st.ca.toLocaleString()} CHF</td><td class="py-2 text-right text-slate-400 font-mono">${st.pipe.toLocaleString()} CHF</td><td class="py-2 text-right font-bold text-emerald-500">${Math.round((st.win/st.total)*100)} %</td></tr>`).join('');
             renderCharts(data);
         }
 
