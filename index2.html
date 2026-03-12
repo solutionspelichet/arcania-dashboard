@@ -776,7 +776,7 @@
                     rev25: Array(12).fill(0), rev26: Array(12).fill(0), fore26: Array(12).fill(0),
                     dests: {}, comms: {},
                     states: { "Clos":0, "Devis Envoyés":0, "En Négociation":0, "Annulés":0 },
-                    stats: { ca:0, marge:0, pipe:0, vol:0, win:0, total:0, sumTaux:0, countTaux:0 },
+                    stats: { ca:0, marge:0, pipe:0, vol:0, win:0, total:0, totalYTD:0, sumTaux:0, countTaux:0 },
                     wow: { ca:0, pipe:0 },
                     segs: {
                         particulier:   {ca:0,marge:0,pipe:0,gagnes:0,total:0},
@@ -803,7 +803,9 @@
                     typeClient: col(['type_client','tiers_consent']),
                     dest:       col(['destination_pays','etu_code']),
                     dateSig:    col(['date_signature','etu_dtemission']),
+                    dateCrea:   col(['date_creation','etu_dtdevis']),
                 };
+                const CURRENT_YEAR = new Date().getFullYear(); // 2026
                 console.log('Headers:', headers);
                 console.log('Index détectés:', idx);
 
@@ -843,7 +845,12 @@
                     const commercial = (c[idx.commercial] || "Inconnu").trim();
                     const typeC      = (c[idx.typeClient] || "nouveau").toLowerCase();
                     const dest       = idx.dest >= 0 ? (c[idx.dest] || "AUTRE").toUpperCase() : "AUTRE";
+                    const dCrea      = new Date(c[idx.dateCrea] || c[idx.dateSig] || "");
                     const dSig       = new Date(c[idx.dateSig] || "");
+                    // Année du dossier = Date_Creation
+                    const dossierYear = !isNaN(dCrea.getTime()) ? dCrea.getFullYear()
+                                      : (!isNaN(dSig.getTime()) ? dSig.getFullYear() : 0);
+                    const isCurrentYear = (dossierYear === CURRENT_YEAR);
 
                     const isGagne  = statut.includes('gagn') || statut === 'd';
                     const isAnnule = statut.includes('annul') || statut.includes('perdu') || statut === 'a';
@@ -851,44 +858,58 @@
                     const isNego   = statut.includes('négo') || statut.includes('nego') || statut === 'e';
                     const isPipe   = isDevis || isNego || statut.includes('en cours') || statut === 'q';
 
+                    // Compteurs totaux (pour taux conversion toutes années)
                     data.stats.total++;
                     data.segs[segKey].total++;
+                    // Compteurs YTD uniquement
+                    if (isCurrentYear) {
+                        data.stats.totalYTD++;
+                        data.segs[segKey].totalYTD = (data.segs[segKey].totalYTD || 0) + 1;
+                    }
 
                     if (isGagne) {
-                        data.stats.ca    += montant;
-                        data.stats.marge += marge;
-                        data.stats.win++;
-                        data.stats.vol   += vol;
-                        if (tauxM > 0) { data.stats.sumTaux += tauxM; data.stats.countTaux++; }
-                        data.states["Clos"] += montant;
-                        data.segs[segKey].ca     += montant;
-                        data.segs[segKey].marge  += marge;
-                        data.segs[segKey].gagnes++;
-                        if (typeC.includes("exist")) { data.clients.existant_ca += montant; data.clients.existant_count++; }
-                        else                          { data.clients.nouveau_ca  += montant; data.clients.nouveau_count++;  }
-                        if (!data.comms[commercial]) data.comms[commercial] = { ca:0, pipe:0, win:0, total:0 };
-                        data.comms[commercial].ca  += montant;
-                        data.comms[commercial].win++;
-                        data.dests[dest] = (data.dests[dest]||0) + vol;
-                        if (!isNaN(dSig.getTime())) {
-                            if (dSig.getFullYear() === 2023) data.rev25[dSig.getMonth()] += montant;
-                            if (dSig.getFullYear() === 2024) data.rev25[dSig.getMonth()] += montant;
-                            if (dSig.getFullYear() === 2025) data.rev25[dSig.getMonth()] += montant;
-                            if (dSig.getFullYear() === 2026) data.rev26[dSig.getMonth()] += montant;
+                        // YTD : CA/Marge/Volume uniquement si dossier année courante
+                        if (isCurrentYear) {
+                            data.stats.ca    += montant;
+                            data.stats.marge += marge;
+                            data.stats.win++;
+                            data.stats.vol   += vol;
+                            if (tauxM > 0) { data.stats.sumTaux += tauxM; data.stats.countTaux++; }
+                            data.segs[segKey].ca     += montant;
+                            data.segs[segKey].marge  += marge;
+                            data.segs[segKey].gagnes++;
+                            if (typeC.includes("exist")) { data.clients.existant_ca += montant; data.clients.existant_count++; }
+                            else                         { data.clients.nouveau_ca  += montant; data.clients.nouveau_count++;  }
+                            if (!data.comms[commercial]) data.comms[commercial] = { ca:0, pipe:0, win:0, total:0 };
+                            data.comms[commercial].ca  += montant;
+                            data.comms[commercial].win++;
                         }
-                        if (!isNaN(dSig.getTime()) && dSig >= sDays) data.wow.ca += montant;
+                        data.states["Clos"] += montant; // historique pour graphique
+                        data.dests[dest] = (data.dests[dest]||0) + vol;
+                        // Graphique mensuel
+                        const dRef = !isNaN(dCrea.getTime()) ? dCrea : dSig;
+                        if (!isNaN(dRef.getTime())) {
+                            const yr = dRef.getFullYear();
+                            if (yr >= 2023 && yr <= 2025) data.rev25[dRef.getMonth()] += montant;
+                            if (yr === 2026)              data.rev26[dRef.getMonth()] += montant;
+                        }
+                        // WoW : 7 derniers jours
+                        const dWow = !isNaN(dCrea.getTime()) ? dCrea : dSig;
+                        if (!isNaN(dWow.getTime()) && dWow >= sDays) data.wow.ca += montant;
 
                     } else if (isAnnule) {
                         data.states["Annulés"] += montant;
 
                     } else if (isPipe) {
+                        // Pipeline = TOUS les dossiers actifs (toutes années)
                         data.stats.pipe += montant;
                         data.segs[segKey].pipe += montant;
                         if (isDevis) data.states["Devis Envoyés"] += montant;
                         else         data.states["En Négociation"] += montant;
                         if (!data.comms[commercial]) data.comms[commercial] = { ca:0, pipe:0, win:0, total:0 };
                         data.comms[commercial].pipe += montant;
-                        const fDate = (!isNaN(dSig.getTime())) ? dSig : now;
+                        // Forecast 2026
+                        const fDate = (!isNaN(dCrea.getTime())) ? dCrea : now;
                         if (fDate.getFullYear() === 2026) data.fore26[fDate.getMonth()] += montant;
                         data.wow.pipe += montant;
                     }
@@ -932,7 +953,7 @@
                 const summary = {
                     ca: data.stats.ca, marge: data.stats.marge, tauxMarge: tauxMargeMoyen,
                     caWow: data.wow.ca, pipe: data.stats.pipe, pipeWow: data.wow.pipe,
-                    winRate: data.stats.total > 0 ? Math.round((data.stats.win / data.stats.total)*100) : 0,
+                    winRate: data.stats.totalYTD > 0 ? Math.round((data.stats.win / data.stats.totalYTD)*100) : 0,
                     avgVal: data.stats.win > 0 ? Math.round(data.stats.ca / data.stats.win) : 0,
                     vol: data.stats.vol, count: data.stats.win,
                     monthlyForecast: data.fore26.map(v => Math.round(v/1000)),
@@ -947,7 +968,7 @@
                     setStratFields(analysis);
                     switchBilan(activeBilan);
                 }
-                document.getElementById('last-update').innerText = `MAJ : ${new Date().toLocaleTimeString().toUpperCase()}`;
+                document.getElementById('last-update').innerText = `MAJ : ${new Date().toLocaleTimeString().toUpperCase()} — YTD ${CURRENT_YEAR}`;
             } catch (err) { console.error('Init error:', err); }
         }
 
@@ -956,7 +977,7 @@
             document.getElementById('kpi-ca').innerText = fmt(s.ca);
             document.getElementById('kpi-ca-comp').innerText = `+${s.caWow.toLocaleString()} CHF vs S-1`;
             document.getElementById('kpi-marge').innerText = fmt(s.marge);
-            document.getElementById('kpi-marge-comp').innerText = `YTD`;
+            document.getElementById('kpi-marge-comp').innerText = `YTD ${CURRENT_YEAR}`;
             document.getElementById('kpi-taux-marge').innerText = s.tauxMarge + ' %';
             document.getElementById('kpi-pipe').innerText = fmt(s.pipe);
             document.getElementById('kpi-pipe-comp').innerText = `${s.pipeWow >= 0 ? '+' : ''}${s.pipeWow.toLocaleString()} CHF vs S-1`;
