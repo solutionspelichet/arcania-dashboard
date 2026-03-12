@@ -453,68 +453,129 @@
                 const res = await fetch(BASE_URL);
                 const csv = await res.text();
                 const lines = csv.split('\n').filter(l => l.trim() !== "");
-                let data = { rev25: Array(12).fill(0), rev26: Array(12).fill(0), fore26: Array(12).fill(0), dests: {}, comms: {}, states: { "Clos":0, "Devis Envoyés":0, "En Négociation":0, "Annulés":0 }, stats: { ca: 0, marge: 0, pipe: 0, vol: 0, win: 0, total: 0, sumTaux: 0, countTaux: 0 }, wow: { ca: 0, pipe: 0 }, segs: { particulier: {ca:0,marge:0,pipe:0,gagnes:0,total:0}, professionnel: {ca:0,marge:0,pipe:0,gagnes:0,total:0}, manutention: {ca:0,marge:0,pipe:0,gagnes:0,total:0} }, clients: { nouveau_ca:0, existant_ca:0, nouveau_count:0, existant_count:0 } };
-                const now = new Date();
+
+                let data = {
+                    rev25: Array(12).fill(0), rev26: Array(12).fill(0), fore26: Array(12).fill(0),
+                    dests: {}, comms: {},
+                    states: { "Clos":0, "Devis Envoyés":0, "En Négociation":0, "Annulés":0 },
+                    stats: { ca:0, marge:0, pipe:0, vol:0, win:0, total:0, sumTaux:0, countTaux:0 },
+                    wow: { ca:0, pipe:0 },
+                    segs: {
+                        particulier:   {ca:0,marge:0,pipe:0,gagnes:0,total:0},
+                        professionnel: {ca:0,marge:0,pipe:0,gagnes:0,total:0},
+                        manutention:   {ca:0,marge:0,pipe:0,gagnes:0,total:0}
+                    },
+                    clients: { nouveau_ca:0, existant_ca:0, nouveau_count:0, existant_count:0 }
+                };
+
+                const now   = new Date();
                 const sDays = new Date(now.getTime() - 7*24*60*60*1000);
 
+                // ── Détection automatique des colonnes par en-têtes ──
+                const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/"/g,''));
+                const col = (names) => { for (const n of names) { const i = headers.indexOf(n.toLowerCase()); if (i>=0) return i; } return -1; };
+                const idx = {
+                    statut:     col(['statut_dossier','statut','etu_statut']),
+                    montant:    col(['montant_ht','montant','etu_totventereel']),
+                    marge:      col(['marge_ht','marge']),
+                    taux:       col(['taux_marge_pct','taux_marge_pct','taux']),
+                    vol:        col(['volume_m3','etu_volrelm3','volume']),
+                    commercial: col(['commercial','etu_inspecteur']),
+                    segment:    col(['segment']),
+                    typeClient: col(['type_client','tiers_consent']),
+                    dest:       col(['destination_pays','etu_code']),
+                    dateSig:    col(['date_signature','etu_dtemission']),
+                };
+                console.log('Headers:', headers);
+                console.log('Index détectés:', idx);
+
+                // ── Boucle principale ──
                 lines.slice(1).forEach(l => {
-                    // Schéma : 0=ID_Dossier, 1=Date_Creation, 2=Date_Signature, 3=Commercial
-                    //          4=Statut_Dossier, 5=Segment, 6=Type_Client, 7=Montant_HT
-                    //          8=Marge_HT, 9=Taux_Marge_Pct, 10=Volume_m3
-                    //          11=Origine_Pays, 12=Destination_Pays, 13=Notes
-                    const c = l.match(/("(?:[^"]|"")*"|[^,]*)/g).map(v => v.replace(/^"|"$/g,'').replace(/""/g,'"').trim());
-                    const statut     = (c[4]||"").toLowerCase();
-                    const montant    = parseFloat(c[7])||0;
-                    const marge      = parseFloat(c[8])||0;
-                    const tauxM      = parseFloat(c[9])||0;
-                    const vol        = parseFloat(c[10])||0;
-                    const commercial = c[3]||"Inconnu";
-                    const segRaw     = (c[5]||"particulier").toLowerCase();
-                    const typeC      = (c[6]||"nouveau").toLowerCase();
-                    const dest       = (c[12]||"AUTRE").toUpperCase();
-                    const dSig       = new Date(c[2]);
-                    const segKey     = segRaw.includes("manut") ? "manutention" : segRaw.includes("pro") ? "professionnel" : "particulier";
-                    // Alias pour compatibilité avec le code d'agrégation ci-dessous
-                    const valN = montant, margeN = marge, tauxN = tauxM, volN = vol, name = commercial;
+                    if (!l.trim()) return;
+                    const c = (l.match(/("(?:[^"]|"")*"|[^,\r\n]*)/g) || [])
+                                .map(v => v.replace(/^"|"$/g,'').replace(/""/g,'"').trim());
+
+                    const statut     = (c[idx.statut]     || "").toLowerCase();
+                    const montant    = parseFloat(c[idx.montant])    || 0;
+                    const segRaw     = (c[idx.segment]    || "particulier").toLowerCase();
+                    const segKey     = segRaw.includes("manut") ? "manutention"
+                                     : segRaw.includes("pro")   ? "professionnel"
+                                     : "particulier";
+                    const marge      = idx.marge >= 0
+                                     ? (parseFloat(c[idx.marge]) || 0)
+                                     : Math.round(montant * (segKey === 'manutention' ? 0.42 : segKey === 'professionnel' ? 0.35 : 0.30));
+                    const tauxM      = parseFloat(c[idx.taux])       || 0;
+                    const vol        = parseFloat(c[idx.vol])        || 0;
+                    const commercial = (c[idx.commercial] || "Inconnu").trim();
+                    const typeC      = (c[idx.typeClient] || "nouveau").toLowerCase();
+                    const dest       = idx.dest >= 0 ? (c[idx.dest] || "AUTRE").toUpperCase() : "AUTRE";
+                    const dSig       = new Date(c[idx.dateSig] || "");
+
+                    const isGagne  = statut.includes('gagn') || statut === 'd';
+                    const isAnnule = statut.includes('annul') || statut.includes('perdu') || statut === 'a';
+                    const isDevis  = statut.includes('devis') || statut === 'x';
+                    const isNego   = statut.includes('négo') || statut.includes('nego') || statut === 'e';
+                    const isPipe   = isDevis || isNego || statut.includes('en cours') || statut === 'q';
 
                     data.stats.total++;
                     data.segs[segKey].total++;
 
-                    if (statut.includes('gagn') || statut.includes('clos')) {
-                        data.stats.ca += valN; data.stats.marge += margeN; data.stats.win++; data.stats.vol += volN;
-                        if (tauxN > 0) { data.stats.sumTaux += tauxN; data.stats.countTaux++; }
-                        data.states["Clos"] += valN;
-                        data.segs[segKey].ca += valN; data.segs[segKey].marge += margeN; data.segs[segKey].gagnes++;
-                        if (typeC.includes("exist")) { data.clients.existant_ca += valN; data.clients.existant_count++; }
-                        else { data.clients.nouveau_ca += valN; data.clients.nouveau_count++; }
-                        if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, win: 0, total: 0 };
-                        data.comms[name].ca += valN; data.comms[name].win++;
-                        data.dests[dest] = (data.dests[dest]||0) + volN;
+                    if (isGagne) {
+                        data.stats.ca    += montant;
+                        data.stats.marge += marge;
+                        data.stats.win++;
+                        data.stats.vol   += vol;
+                        if (tauxM > 0) { data.stats.sumTaux += tauxM; data.stats.countTaux++; }
+                        data.states["Clos"] += montant;
+                        data.segs[segKey].ca     += montant;
+                        data.segs[segKey].marge  += marge;
+                        data.segs[segKey].gagnes++;
+                        if (typeC.includes("exist")) { data.clients.existant_ca += montant; data.clients.existant_count++; }
+                        else                          { data.clients.nouveau_ca  += montant; data.clients.nouveau_count++;  }
+                        if (!data.comms[commercial]) data.comms[commercial] = { ca:0, pipe:0, win:0, total:0 };
+                        data.comms[commercial].ca  += montant;
+                        data.comms[commercial].win++;
+                        data.dests[dest] = (data.dests[dest]||0) + vol;
                         if (!isNaN(dSig.getTime())) {
-                            if (dSig.getFullYear() === 2025) data.rev25[dSig.getMonth()] += valN;
-                            if (dSig.getFullYear() === 2026) data.rev26[dSig.getMonth()] += valN;
+                            if (dSig.getFullYear() === 2023) data.rev25[dSig.getMonth()] += montant;
+                            if (dSig.getFullYear() === 2024) data.rev25[dSig.getMonth()] += montant;
+                            if (dSig.getFullYear() === 2025) data.rev25[dSig.getMonth()] += montant;
+                            if (dSig.getFullYear() === 2026) data.rev26[dSig.getMonth()] += montant;
                         }
-                        if (dSig >= sDays) data.wow.ca += valN;
-                    } else if (statut.includes('annul') || statut.includes('perdu')) {
-                        data.states["Annulés"] += valN;
-                    } else {
-                        data.stats.pipe += valN;
-                        data.segs[segKey].pipe += valN;
-                        if (statut.includes('devis')) data.states["Devis Envoyés"] += valN;
-                        else data.states["En Négociation"] += valN;
-                        if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, win: 0, total: 0 };
-                        data.comms[name].pipe += valN;
-                        let fDate = isNaN(dSig.getTime()) ? now : dSig;
-                        if (fDate.getFullYear() === 2026) data.fore26[fDate.getMonth()] += valN;
-                        data.wow.pipe += valN;
-                    }
-                    if (data.comms[name]) data.comms[name].total++;
-                });
+                        if (!isNaN(dSig.getTime()) && dSig >= sDays) data.wow.ca += montant;
 
-                const tauxMargeMoyen = data.stats.countTaux > 0 ? Math.round(data.stats.sumTaux / data.stats.countTaux) : 0;
-                const summary = { ca: data.stats.ca, marge: data.stats.marge, tauxMarge: tauxMargeMoyen, caWow: data.wow.ca, pipe: data.stats.pipe, pipeWow: data.wow.pipe, winRate: Math.round((data.stats.win/data.stats.total)*100), avgVal: Math.round(data.stats.ca/data.stats.win) || 0, vol: data.stats.vol, count: data.stats.win, monthlyForecast: data.fore26.map(v => Math.round(v/1000)), segs: data.segs, clients: data.clients , comms: data.comms };
+                    } else if (isAnnule) {
+                        data.states["Annulés"] += montant;
+
+                    } else if (isPipe) {
+                        data.stats.pipe += montant;
+                        data.segs[segKey].pipe += montant;
+                        if (isDevis) data.states["Devis Envoyés"] += montant;
+                        else         data.states["En Négociation"] += montant;
+                        if (!data.comms[commercial]) data.comms[commercial] = { ca:0, pipe:0, win:0, total:0 };
+                        data.comms[commercial].pipe += montant;
+                        const fDate = (!isNaN(dSig.getTime())) ? dSig : now;
+                        if (fDate.getFullYear() === 2026) data.fore26[fDate.getMonth()] += montant;
+                        data.wow.pipe += montant;
+                    }
+
+                    if (data.comms[commercial]) data.comms[commercial].total++;
+                }); // fin forEach
+
+                const tauxMargeMoyen = data.stats.countTaux > 0
+                    ? Math.round(data.stats.sumTaux / data.stats.countTaux) : 0;
+                const summary = {
+                    ca: data.stats.ca, marge: data.stats.marge, tauxMarge: tauxMargeMoyen,
+                    caWow: data.wow.ca, pipe: data.stats.pipe, pipeWow: data.wow.pipe,
+                    winRate: data.stats.total > 0 ? Math.round((data.stats.win / data.stats.total)*100) : 0,
+                    avgVal: data.stats.win > 0 ? Math.round(data.stats.ca / data.stats.win) : 0,
+                    vol: data.stats.vol, count: data.stats.win,
+                    monthlyForecast: data.fore26.map(v => Math.round(v/1000)),
+                    segs: data.segs, clients: data.clients, comms: data.comms
+                };
+
                 updateUI(data, summary);
-                
+
                 const analysis = await fetchAnalysisFromN8N(summary);
                 if (analysis) {
                     aiReports = { hebdo: analysis.hebdo || "N/A", annuel: analysis.annuel || "N/A" };
@@ -522,7 +583,7 @@
                     switchBilan(activeBilan);
                 }
                 document.getElementById('last-update').innerText = `MAJ : ${new Date().toLocaleTimeString().toUpperCase()}`;
-            } catch (err) { console.error(err); }
+            } catch (err) { console.error('Init error:', err); }
         }
 
         function updateUI(data, s) {
