@@ -76,18 +76,34 @@
             <div class="px-6 py-4 border-b border-slate-800 bg-slate-800/20">
                 <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Plan d'Action IA</h3>
             </div>
-            <div id="strat-plan" class="p-5 space-y-5">
+            <div id="strat-plan" class="p-5 space-y-4 max-h-[420px] overflow-y-auto">
+                <p class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600">— Actions immédiates —</p>
                 <div class="flex items-start space-x-3">
-                    <div class="mt-1 p-1 bg-blue-500/20 rounded border border-blue-500/30"><i data-lucide="trending-up" class="w-3 h-3 text-blue-400"></i></div>
+                    <div class="mt-1 p-1 bg-blue-500/20 rounded border border-blue-500/30 shrink-0"><i data-lucide="trending-up" class="w-3 h-3 text-blue-400"></i></div>
                     <div><p class="text-[10px] font-bold text-blue-400 uppercase tracking-tight">Closing</p><p id="strat-devcom" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
                 </div>
                 <div class="flex items-start space-x-3">
-                    <div class="mt-1 p-1 bg-emerald-500/20 rounded border border-emerald-500/30"><i data-lucide="target" class="w-3 h-3 text-emerald-400"></i></div>
+                    <div class="mt-1 p-1 bg-emerald-500/20 rounded border border-emerald-500/30 shrink-0"><i data-lucide="target" class="w-3 h-3 text-emerald-400"></i></div>
                     <div><p class="text-[10px] font-bold text-emerald-400 uppercase tracking-tight">Leads & Pipe</p><p id="strat-leads" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
                 </div>
                 <div class="flex items-start space-x-3">
-                    <div class="mt-1 p-1 bg-purple-500/20 rounded border border-purple-500/30"><i data-lucide="globe" class="w-3 h-3 text-purple-400"></i></div>
+                    <div class="mt-1 p-1 bg-purple-500/20 rounded border border-purple-500/30 shrink-0"><i data-lucide="globe" class="w-3 h-3 text-purple-400"></i></div>
                     <div><p class="text-[10px] font-bold text-purple-400 uppercase tracking-tight">Visibilité</p><p id="strat-vis" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
+                </div>
+                <div class="border-t border-slate-800 pt-4">
+                    <p class="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600 mb-4">— Stratégie 3-6 mois —</p>
+                    <div class="flex items-start space-x-3 mb-4">
+                        <div class="mt-1 p-1 bg-orange-500/20 rounded border border-orange-500/30 shrink-0"><i data-lucide="briefcase" class="w-3 h-3 text-orange-400"></i></div>
+                        <div><p class="text-[10px] font-bold text-orange-400 uppercase tracking-tight">Stratégie Commerciale</p><p id="strat-commercial" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
+                    </div>
+                    <div class="flex items-start space-x-3 mb-4">
+                        <div class="mt-1 p-1 bg-pink-500/20 rounded border border-pink-500/30 shrink-0"><i data-lucide="megaphone" class="w-3 h-3 text-pink-400"></i></div>
+                        <div><p class="text-[10px] font-bold text-pink-400 uppercase tracking-tight">Stratégie Marketing</p><p id="strat-marketing" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
+                    </div>
+                    <div class="flex items-start space-x-3">
+                        <div class="mt-1 p-1 bg-yellow-500/20 rounded border border-yellow-500/30 shrink-0"><i data-lucide="radio" class="w-3 h-3 text-yellow-400"></i></div>
+                        <div><p class="text-[10px] font-bold text-yellow-400 uppercase tracking-tight">Communication & Notoriété</p><p id="strat-comm" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -162,7 +178,6 @@
             return null;
         }
 
-        // Garde une référence au summary pour le bouton Réessayer
         let _lastSummary = null;
 
         function setAiStatus(status, color) {
@@ -172,12 +187,21 @@
             document.getElementById('ai-ping').className = `absolute inline-flex h-full w-full rounded-full ${colors[color][1]}`;
         }
 
+        function setStratFields(data) {
+            document.getElementById('strat-devcom').innerText = data.devCom || "N/A";
+            document.getElementById('strat-leads').innerText = data.leads || "N/A";
+            document.getElementById('strat-vis').innerText = data.visibilite || "N/A";
+            document.getElementById('strat-commercial').innerText = data.stratCommerciale || "N/A";
+            document.getElementById('strat-marketing').innerText = data.stratMarketing || "N/A";
+            document.getElementById('strat-comm').innerText = data.stratComm || "N/A";
+        }
+
         function showRetryButton() {
             const existing = document.getElementById('retry-btn');
             if (existing) return;
             const btn = document.createElement('button');
             btn.id = 'retry-btn';
-            btn.innerText = '↺ Réessayer l\'analyse IA';
+            btn.innerText = '↺ Réessayer l'analyse IA';
             btn.className = 'mt-4 px-4 py-2 text-[11px] font-bold bg-slate-700 hover:bg-slate-600 text-white rounded-lg border border-slate-500 transition-all';
             btn.onclick = async () => {
                 btn.remove();
@@ -185,9 +209,7 @@
                     const analysis = await fetchAnalysisFromN8N(_lastSummary);
                     if (analysis) {
                         aiReports = { hebdo: analysis.hebdo || "N/A", annuel: analysis.annuel || "N/A" };
-                        document.getElementById('strat-devcom').innerText = analysis.devCom || "N/A";
-                        document.getElementById('strat-leads').innerText = analysis.leads || "N/A";
-                        document.getElementById('strat-vis').innerText = analysis.visibilite || "N/A";
+                        setStratFields(analysis);
                         switchBilan(activeBilan);
                     }
                 }
@@ -197,15 +219,11 @@
 
         async function fetchAnalysisFromN8N(summary) {
             _lastSummary = summary;
-            const TIMEOUT_MS = 20000; // 20 secondes max
-
+            const TIMEOUT_MS = 25000;
             try {
                 setAiStatus("Appel n8n...", "blue");
-
-                // AbortController pour le timeout
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
-
                 let response;
                 try {
                     response = await fetch(N8N_WEBHOOK_URL, {
@@ -217,60 +235,42 @@
                 } catch (fetchErr) {
                     clearTimeout(timeoutId);
                     if (fetchErr.name === 'AbortError') {
-                        setAiStatus("TIMEOUT (20s)", "red");
-                        aiReports = {
-                            hebdo: "⏱️ <b>TIMEOUT</b> : n8n n'a pas répondu en 20 secondes.<br><br>Causes possibles :<br>• Le workflow n8n est en mode <b>Test</b> (cliquez Listen)<br>• GPT-4o met trop de temps → passez à <b>gpt-4o-mini</b><br>• n8n est surchargé ou offline",
-                            annuel: "Vérifiez que votre workflow n8n est bien <b>actif</b> et en mode <b>Last Node</b>."
-                        };
-                        document.getElementById('strat-devcom').innerText = "Timeout n8n";
-                        document.getElementById('strat-leads').innerText = "Vérifier workflow actif";
-                        document.getElementById('strat-vis').innerText = "n8n lent?";
+                        setAiStatus("TIMEOUT (25s)", "red");
+                        const errData = { hebdo: "⏱️ <b>TIMEOUT</b> : n8n n'a pas répondu en 25s. Causes : workflow en mode Test, GPT trop lent, n8n offline.", annuel: "Vérifiez que le workflow est actif et en mode Last Node.", devCom: "Timeout n8n", leads: "Vérifier workflow", visibilite: "n8n lent?", stratCommerciale: "—", stratMarketing: "—", stratComm: "—" };
+                        aiReports = { hebdo: errData.hebdo, annuel: errData.annuel };
+                        setStratFields(errData);
                         switchBilan(activeBilan);
                         showRetryButton();
                         return null;
                     }
                     throw fetchErr;
                 }
-
                 clearTimeout(timeoutId);
-
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const rawResult = await response.json();
-
-                // Détection mode "Respond immediately" (workflow non configuré)
                 if (rawResult && rawResult.message === "Workflow was started") {
                     setAiStatus("CONFIG REQUIS", "orange");
-                    return {
-                        hebdo: "⚠️ <b>RÉGLAGE N8N REQUIS</b> : Le webhook répond immédiatement sans attendre l'IA.<br><br><b>Solution :</b> Dans le nœud Webhook > <i>Respond</i> → choisissez <b>Using 'Respond to Webhook' node</b> ou <b>Last Node</b>.",
-                        annuel: "Le workflow n8n ne transmet pas la réponse de l'IA.",
-                        devCom: "Ajuster n8n", leads: "Mode Last Node", visibilite: "n8n config"
-                    };
+                    return { hebdo: "⚠️ <b>RÉGLAGE N8N</b> : Webhook en mode Respond immediately. Passez en mode Last Node.", annuel: "Le workflow ne transmet pas la réponse IA.", devCom: "Ajuster n8n", leads: "Mode Last Node", visibilite: "n8n config", stratCommerciale: "—", stratMarketing: "—", stratComm: "—" };
                 }
-
                 const data = findStrategicData(rawResult);
                 if (data && (data.hebdo || data.annuel)) {
                     setAiStatus("IA ACTIVE ✓", "emerald");
                     return data;
                 }
-
-                // Réponse reçue mais format inattendu — on l'affiche pour debug
                 console.warn("Réponse n8n inattendue:", JSON.stringify(rawResult));
                 throw new Error(`Format inattendu: ${JSON.stringify(rawResult).substring(0, 200)}`);
-
             } catch (e) {
                 console.error("n8n Error:", e);
                 setAiStatus("IA BLOQUÉE", "red");
-
                 const isCors = e.message && (e.message.toLowerCase().includes('failed to fetch') || e.message.toLowerCase().includes('network'));
-                aiReports = {
-                    hebdo: isCors
-                        ? "❌ <b>ERREUR RÉSEAU / CORS</b> : Le navigateur ne peut pas joindre n8n.<br><br><b>Solutions :</b><br>• Vérifiez que n8n est <b>en ligne</b> sur <code>n8n.guedou.com</code><br>• Dans le nœud Webhook n8n, ajoutez le header <code>Access-Control-Allow-Origin: *</code><br>• Ouvrez la console (F12 > Réseau) pour voir l'erreur exacte"
-                        : `❌ <b>ERREUR :</b> ${e.message}`,
-                    annuel: "Consultez la console (F12) pour les détails."
+                const errData = {
+                    hebdo: isCors ? "❌ <b>ERREUR RÉSEAU/CORS</b> : Vérifiez que n8n est en ligne et que le header Access-Control-Allow-Origin: * est configuré." : `❌ <b>ERREUR :</b> ${e.message}`,
+                    annuel: "Consultez la console (F12) pour les détails.",
+                    devCom: "Erreur réseau", leads: "Vérifier n8n", visibilite: "n8n offline?",
+                    stratCommerciale: "—", stratMarketing: "—", stratComm: "—"
                 };
-                document.getElementById('strat-devcom').innerText = "Erreur réseau";
-                document.getElementById('strat-leads').innerText = "Vérifier n8n";
-                document.getElementById('strat-vis').innerText = "n8n offline?";
+                aiReports = { hebdo: errData.hebdo, annuel: errData.annuel };
+                setStratFields(errData);
                 switchBilan(activeBilan);
                 showRetryButton();
                 return null;
@@ -339,9 +339,11 @@
                     document.getElementById('strat-devcom').innerText = analysis.devCom || "N/A";
                     document.getElementById('strat-leads').innerText = analysis.leads || "N/A";
                     document.getElementById('strat-vis').innerText = analysis.visibilite || "N/A";
+                    document.getElementById('strat-commercial').innerText = analysis.stratCommerciale || "N/A";
+                    document.getElementById('strat-marketing').innerText = analysis.stratMarketing || "N/A";
+                    document.getElementById('strat-comm').innerText = analysis.stratComm || "N/A";
                     switchBilan(activeBilan);
                 }
-                // Si null → fetchAnalysisFromN8N a déjà mis à jour l'UI (timeout/erreur)
                 document.getElementById('last-update').innerText = `MAJ : ${new Date().toLocaleTimeString().toUpperCase()}`;
             } catch (err) { console.error(err); }
         }
