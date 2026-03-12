@@ -160,7 +160,9 @@
     <script>
         // CONFIGURATION PRODUCTION
         const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbuJa036t_m_LhDX5RXHBNPexD9jKcR54qlGFKA-wzxwuUS67TOdYk8euyhlXAspySvKaf8-kUmI6I/pub?gid=0&single=true&output=csv';
-        const N8N_WEBHOOK_URL = 'https://n8n.guedou.com/webhook-test/arcania-dashboard-analysis'; 
+        
+        // CONSEIL : Utilisez l'URL de PRODUCTION (pas webhook-test) pour éviter les 404
+        const N8N_WEBHOOK_URL = 'https://n8n.guedou.com/webhook/arcania-dashboard-analysis'; 
 
         let aiReports = { hebdo: "Analyse en attente...", annuel: "Analyse en attente..." };
         let activeBilan = 'hebdo';
@@ -168,18 +170,18 @@
         async function fetchAnalysisFromN8N(summary) {
             if (!N8N_WEBHOOK_URL || N8N_WEBHOOK_URL.includes('VOTRE_URL_WEBHOOK_N8N_ICI')) {
                 return {
-                    hebdo: "⚠️ Configuration requise : Veuillez renseigner l'URL de votre Webhook n8n à la ligne 159 du code.",
-                    annuel: "L'analyse annuelle nécessite la configuration du Webhook n8n.",
-                    devCom: "Non configuré",
-                    leads: "Non configuré",
-                    visibilite: "Non configuré"
+                    hebdo: "⚠️ Configuration requise : Renseignez l'URL de votre Webhook n8n.",
+                    annuel: "Veuillez configurer n8n.",
+                    devCom: "N/A", leads: "N/A", visibilite: "N/A"
                 };
             }
 
             try {
                 const response = await fetch(N8N_WEBHOOK_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify(summary)
                 });
                 
@@ -187,12 +189,13 @@
                 return await response.json();
             } catch (e) {
                 console.error("n8n Proxy Error", e);
+                // Si l'erreur est liée au CORS ou à la connexion
                 return {
-                    hebdo: "❌ Erreur de connexion avec n8n. Vérifiez que le workflow est 'Active' et que l'URL est correcte.",
-                    annuel: "Connexion impossible.",
-                    devCom: "Erreur n8n",
-                    leads: "Erreur n8n",
-                    visibilite: "Vérifier URL"
+                    hebdo: "❌ Erreur de connexion (CORS/404). Solution : Utilisez l'URL de PRODUCTION n8n et assurez-vous que le header 'Access-Control-Allow-Origin' est activé dans les options du noeud Webhook n8n.",
+                    annuel: "Vérifiez la configuration n8n.",
+                    devCom: "Erreur réseau",
+                    leads: "Vérifier CORS",
+                    visibilite: "Vérifier n8n"
                 };
             }
         }
@@ -249,7 +252,6 @@
                         if (fDate.getFullYear() === 2026) data.fore26[fDate.getMonth()] += val;
                         data.wow.pipe += val;
 
-                        // Capture des dates pour le timing IA
                         if (!isNaN(dSig.getTime()) && dSig > now) {
                             data.upcoming.push(dSig.toLocaleDateString('fr-FR'));
                         }
@@ -272,7 +274,6 @@
 
                 updateUI(data, summary);
                 
-                // APPEL N8N PROXY
                 const analysis = await fetchAnalysisFromN8N(summary);
                 if (analysis) {
                     aiReports = { 
@@ -316,7 +317,8 @@
 
         function renderCharts(d) {
             const ctx = document.getElementById('mainChart').getContext('2d');
-            new Chart(ctx, {
+            if (window.myChart) window.myChart.destroy();
+            window.myChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: ['JAN', 'FEV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOU', 'SEP', 'OCT', 'NOV', 'DEC'],
@@ -345,8 +347,9 @@
             });
 
             const destCtx = document.getElementById('destChart').getContext('2d');
+            if (window.myDestChart) window.myDestChart.destroy();
             const topD = Object.entries(d.dests).sort((a,b)=>b[1]-a[1]).slice(0, 5);
-            new Chart(destCtx, {
+            window.myDestChart = new Chart(destCtx, {
                 type: 'bar',
                 data: {
                     labels: topD.map(e => e[0]),
