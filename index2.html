@@ -162,50 +162,118 @@
             return null;
         }
 
-        async function fetchAnalysisFromN8N(summary) {
-            try {
-                document.getElementById('ai-status').innerText = "Appel n8n...";
-                document.getElementById('ai-dot').className = "relative inline-flex rounded-full h-2 w-2 bg-blue-500";
-                document.getElementById('ai-ping').className = "absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75 animate-ping";
+        // Garde une référence au summary pour le bouton Réessayer
+        let _lastSummary = null;
 
-                const response = await fetch(N8N_WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(summary)
-                });
-                
-                if (!response.ok) throw new Error(`Status: ${response.status}`);
+        function setAiStatus(status, color) {
+            const colors = { blue: ['bg-blue-500', 'bg-blue-400 opacity-75 animate-ping'], emerald: ['bg-emerald-500', 'bg-emerald-400 opacity-75'], orange: ['bg-orange-500', 'bg-orange-400 opacity-75'], red: ['bg-red-500', 'bg-red-400 opacity-75'] };
+            document.getElementById('ai-status').innerText = status;
+            document.getElementById('ai-dot').className = `relative inline-flex rounded-full h-2 w-2 ${colors[color][0]}`;
+            document.getElementById('ai-ping').className = `absolute inline-flex h-full w-full rounded-full ${colors[color][1]}`;
+        }
+
+        function showRetryButton() {
+            const existing = document.getElementById('retry-btn');
+            if (existing) return;
+            const btn = document.createElement('button');
+            btn.id = 'retry-btn';
+            btn.innerText = '↺ Réessayer l\'analyse IA';
+            btn.className = 'mt-4 px-4 py-2 text-[11px] font-bold bg-slate-700 hover:bg-slate-600 text-white rounded-lg border border-slate-500 transition-all';
+            btn.onclick = async () => {
+                btn.remove();
+                if (_lastSummary) {
+                    const analysis = await fetchAnalysisFromN8N(_lastSummary);
+                    if (analysis) {
+                        aiReports = { hebdo: analysis.hebdo || "N/A", annuel: analysis.annuel || "N/A" };
+                        document.getElementById('strat-devcom').innerText = analysis.devCom || "N/A";
+                        document.getElementById('strat-leads').innerText = analysis.leads || "N/A";
+                        document.getElementById('strat-vis').innerText = analysis.visibilite || "N/A";
+                        switchBilan(activeBilan);
+                    }
+                }
+            };
+            document.getElementById('bilan-content').appendChild(btn);
+        }
+
+        async function fetchAnalysisFromN8N(summary) {
+            _lastSummary = summary;
+            const TIMEOUT_MS = 20000; // 20 secondes max
+
+            try {
+                setAiStatus("Appel n8n...", "blue");
+
+                // AbortController pour le timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+                let response;
+                try {
+                    response = await fetch(N8N_WEBHOOK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(summary),
+                        signal: controller.signal
+                    });
+                } catch (fetchErr) {
+                    clearTimeout(timeoutId);
+                    if (fetchErr.name === 'AbortError') {
+                        setAiStatus("TIMEOUT (20s)", "red");
+                        aiReports = {
+                            hebdo: "⏱️ <b>TIMEOUT</b> : n8n n'a pas répondu en 20 secondes.<br><br>Causes possibles :<br>• Le workflow n8n est en mode <b>Test</b> (cliquez Listen)<br>• GPT-4o met trop de temps → passez à <b>gpt-4o-mini</b><br>• n8n est surchargé ou offline",
+                            annuel: "Vérifiez que votre workflow n8n est bien <b>actif</b> et en mode <b>Last Node</b>."
+                        };
+                        document.getElementById('strat-devcom').innerText = "Timeout n8n";
+                        document.getElementById('strat-leads').innerText = "Vérifier workflow actif";
+                        document.getElementById('strat-vis').innerText = "n8n lent?";
+                        switchBilan(activeBilan);
+                        showRetryButton();
+                        return null;
+                    }
+                    throw fetchErr;
+                }
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const rawResult = await response.json();
-                
-                // Détection spécifique du message "Workflow was started"
+
+                // Détection mode "Respond immediately" (workflow non configuré)
                 if (rawResult && rawResult.message === "Workflow was started") {
-                    document.getElementById('ai-status').innerText = "CONFIG REQUIS";
-                    document.getElementById('ai-dot').className = "relative inline-flex rounded-full h-2 w-2 bg-orange-500";
+                    setAiStatus("CONFIG REQUIS", "orange");
                     return {
-                        hebdo: "⚠️ REGLAGE N8N : Changez 'HTTP Response' pour 'Last Node' dans votre noeud Webhook.",
-                        annuel: "Le workflow n8n répond trop vite sans attendre l'IA.",
+                        hebdo: "⚠️ <b>RÉGLAGE N8N REQUIS</b> : Le webhook répond immédiatement sans attendre l'IA.<br><br><b>Solution :</b> Dans le nœud Webhook > <i>Respond</i> → choisissez <b>Using 'Respond to Webhook' node</b> ou <b>Last Node</b>.",
+                        annuel: "Le workflow n8n ne transmet pas la réponse de l'IA.",
                         devCom: "Ajuster n8n", leads: "Mode Last Node", visibilite: "n8n config"
                     };
                 }
 
                 const data = findStrategicData(rawResult);
                 if (data && (data.hebdo || data.annuel)) {
-                    document.getElementById('ai-status').innerText = "IA ACTIVE";
-                    document.getElementById('ai-dot').className = "relative inline-flex rounded-full h-2 w-2 bg-emerald-500";
-                    document.getElementById('ai-ping').className = "absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75";
+                    setAiStatus("IA ACTIVE ✓", "emerald");
                     return data;
                 }
-                throw new Error("Data not found");
+
+                // Réponse reçue mais format inattendu — on l'affiche pour debug
+                console.warn("Réponse n8n inattendue:", JSON.stringify(rawResult));
+                throw new Error(`Format inattendu: ${JSON.stringify(rawResult).substring(0, 200)}`);
+
             } catch (e) {
-                console.error("n8n Error", e);
-                document.getElementById('ai-status').innerText = "IA BLOQUÉE";
-                document.getElementById('ai-dot').className = "relative inline-flex rounded-full h-2 w-2 bg-red-500";
-                
-                return {
-                    hebdo: "❌ ERREUR DE CONNEXION (CORS) : Votre serveur n8n bloque la requête. <br><br><b>Solution :</b> Dans votre noeud Webhook n8n > Options > Response Headers, ajoutez 'Access-Control-Allow-Origin' avec la valeur '*'.",
-                    annuel: "Consultez la console du navigateur (F12) pour les détails techniques.",
-                    devCom: "Erreur Réseau", leads: "Check CORS n8n", visibilite: "n8n offline?"
+                console.error("n8n Error:", e);
+                setAiStatus("IA BLOQUÉE", "red");
+
+                const isCors = e.message && (e.message.toLowerCase().includes('failed to fetch') || e.message.toLowerCase().includes('network'));
+                aiReports = {
+                    hebdo: isCors
+                        ? "❌ <b>ERREUR RÉSEAU / CORS</b> : Le navigateur ne peut pas joindre n8n.<br><br><b>Solutions :</b><br>• Vérifiez que n8n est <b>en ligne</b> sur <code>n8n.guedou.com</code><br>• Dans le nœud Webhook n8n, ajoutez le header <code>Access-Control-Allow-Origin: *</code><br>• Ouvrez la console (F12 > Réseau) pour voir l'erreur exacte"
+                        : `❌ <b>ERREUR :</b> ${e.message}`,
+                    annuel: "Consultez la console (F12) pour les détails."
                 };
+                document.getElementById('strat-devcom').innerText = "Erreur réseau";
+                document.getElementById('strat-leads').innerText = "Vérifier n8n";
+                document.getElementById('strat-vis').innerText = "n8n offline?";
+                switchBilan(activeBilan);
+                showRetryButton();
+                return null;
             }
         }
 
@@ -273,6 +341,7 @@
                     document.getElementById('strat-vis').innerText = analysis.visibilite || "N/A";
                     switchBilan(activeBilan);
                 }
+                // Si null → fetchAnalysisFromN8N a déjà mis à jour l'UI (timeout/erreur)
                 document.getElementById('last-update').innerText = `MAJ : ${new Date().toLocaleTimeString().toUpperCase()}`;
             } catch (err) { console.error(err); }
         }
