@@ -492,8 +492,12 @@
                 // ── Boucle principale ──
                 lines.slice(1).forEach(l => {
                     if (!l.trim()) return;
-                    const c = (l.match(/("(?:[^"]|"")*"|[^,\r\n]*)/g) || [])
-                                .map(v => v.replace(/^"|"$/g,'').replace(/""/g,'"').trim());
+                    let c;
+                    try {
+                        c = (l.match(/("(?:[^"]|"")*"|[^,\r\n]*)/g) || l.split(','))
+                             .map(v => String(v).replace(/^"|"$/g,'').replace(/""/g,'"').trim());
+                    } catch(e) { c = l.split(','); }
+                    if (c.length < 5) return; // ligne invalide
 
                     const statut     = (c[idx.statut]     || "").toLowerCase();
                     const montant    = parseFloat(c[idx.montant])    || 0;
@@ -561,6 +565,11 @@
 
                     if (data.comms[commercial]) data.comms[commercial].total++;
                 }); // fin forEach
+
+                console.log('=== ARCANIA DEBUG ===');
+                console.log('Total lignes:', data.stats.total, '| Gagnés:', data.stats.win, '| CA:', data.stats.ca);
+                console.log('Segments:', JSON.stringify(data.segs));
+                console.log('Headers détectés:', idx);
 
                 const tauxMargeMoyen = data.stats.countTaux > 0
                     ? Math.round(data.stats.sumTaux / data.stats.countTaux) : 0;
