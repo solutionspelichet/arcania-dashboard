@@ -14,7 +14,6 @@
         .glass-panel { background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(51, 65, 85, 0.5); backdrop-filter: blur(12px); }
         .glow-cyan { border-top: 2px solid #06b6d4; box-shadow: 0 4px 20px rgba(6, 182, 212, 0.1); }
         .glow-purple { border-top: 2px solid #a855f7; box-shadow: 0 4px 20px rgba(168, 85, 247, 0.1); }
-        .glow-emerald { border-top: 2px solid #10b981; }
         
         .loading-shimmer {
             background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
@@ -62,12 +61,12 @@
                     <button id="btn-annuel" onclick="switchBilan('annuel')" class="px-4 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-white">ANNUEL (YTD)</button>
                 </div>
             </div>
-            <div class="p-6 h-[180px] overflow-y-auto">
+            <div class="p-6 h-[200px] overflow-y-auto">
                 <div id="bilan-content" class="text-slate-300 text-sm leading-relaxed space-y-4 pr-2">
-                    <div class="space-y-3">
+                    <div id="ai-loading-placeholder" class="space-y-3">
                         <div class="h-4 w-3/4 loading-shimmer rounded opacity-50"></div>
                         <div class="h-4 w-full loading-shimmer rounded opacity-30"></div>
-                        <p class="text-[11px] text-slate-500 italic">Génération de l'analyse stratégique en cours...</p>
+                        <p class="text-[11px] text-slate-500 italic">Connexion au serveur n8n en cours...</p>
                     </div>
                 </div>
             </div>
@@ -96,7 +95,7 @@
 
     <!-- KPI GRID -->
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <div class="glass-panel rounded-2xl p-4 border-b-2 border-white"><p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Ventes Clôturées</p><h4 id="kpi-ca" class="text-xl font-black text-white">0 €</h4><p id="kpi-ca-comp" class="text-[9px] mt-1 text-emerald-400 font-bold italic">...</p></div>
+        <div class="glass-panel rounded-2xl p-4 border-b-2 border-white"><p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">CA Clos</p><h4 id="kpi-ca" class="text-xl font-black text-white">0 €</h4><p id="kpi-ca-comp" class="text-[9px] mt-1 text-emerald-400 font-bold italic">...</p></div>
         <div class="glass-panel rounded-2xl p-4 border-b-2 border-purple-500"><p class="text-[9px] font-bold text-purple-300 uppercase tracking-widest mb-1">Valeur du Pipe</p><h4 id="kpi-pipe" class="text-xl font-black text-white">0 €</h4><p id="kpi-pipe-comp" class="text-[9px] mt-1 text-red-400 font-bold italic">...</p></div>
         <div class="glass-panel rounded-2xl p-4 border-b-2 border-cyan-500"><p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Panier Moyen</p><h4 id="kpi-avg" class="text-xl font-black text-white">0 €</h4><p id="kpi-avg-comp" class="text-[9px] mt-1 text-slate-400 italic">Calculé</p></div>
         <div class="glass-panel rounded-2xl p-4 border-b-2 border-emerald-500"><p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Taux Conv.</p><h4 id="kpi-conv" class="text-xl font-black text-white">0 %</h4><p id="kpi-conv-comp" class="text-[9px] mt-1 text-emerald-400 font-bold italic">YTD</p></div>
@@ -106,14 +105,6 @@
 
     <!-- GRAPHIQUE CENTRAL -->
     <div class="glass-panel rounded-2xl p-6 mb-8">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Prévisions & Tendance du CA (K€)</h3>
-            <div class="flex space-x-4 text-[9px] font-bold uppercase text-slate-500">
-                <span class="flex items-center"><span class="w-3 h-0.5 bg-cyan-500 mr-2 shadow-[0_0_5px_#06b6d4]"></span> 2026</span>
-                <span class="flex items-center opacity-50"><span class="w-3 h-0.5 border-t border-dashed border-slate-400 mr-2"></span> 2025</span>
-                <span class="flex items-center"><span class="w-3 h-0.5 border-t border-dashed border-purple-500 mr-2"></span> Forecast</span>
-            </div>
-        </div>
         <div class="h-[320px]"><canvas id="mainChart"></canvas></div>
     </div>
 
@@ -132,8 +123,44 @@
         const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbuJa036t_m_LhDX5RXHBNPexD9jKcR54qlGFKA-wzxwuUS67TOdYk8euyhlXAspySvKaf8-kUmI6I/pub?gid=0&single=true&output=csv';
         const N8N_WEBHOOK_URL = 'https://n8n.guedou.com/webhook/arcania-dashboard-analysis'; 
 
-        let aiReports = { hebdo: "Analyse en attente de n8n...", annuel: "Analyse en attente de n8n..." };
+        let aiReports = { hebdo: "En attente...", annuel: "En attente..." };
         let activeBilan = 'hebdo';
+
+        /**
+         * Cherche récursivement des données stratégiques dans l'objet de réponse
+         */
+        function findStrategicData(obj, depth = 0) {
+            if (!obj || depth > 10) return null;
+            if (typeof obj === 'string') {
+                try {
+                    let clean = obj.replace(/```json/g, "").replace(/```/g, "").trim();
+                    if (clean.startsWith('{') || clean.startsWith('[')) return findStrategicData(JSON.parse(clean), depth + 1);
+                } catch(e) {}
+                return null;
+            }
+            if (Array.isArray(obj)) {
+                for (let item of obj) {
+                    const found = findStrategicData(item, depth + 1);
+                    if (found) return found;
+                }
+                return null;
+            }
+            if (obj.hebdo || obj.annuel) return obj;
+            const targets = ['json', 'body', 'data', 'content', 'message', 'choices', '0'];
+            for (let target of targets) {
+                if (obj[target]) {
+                    const found = findStrategicData(obj[target], depth + 1);
+                    if (found) return found;
+                }
+            }
+            for (let key in obj) {
+                if (obj[key] && typeof obj[key] === 'object') {
+                    const found = findStrategicData(obj[key], depth + 1);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
 
         async function fetchAnalysisFromN8N(summary) {
             try {
@@ -148,23 +175,37 @@
                 });
                 
                 if (!response.ok) throw new Error(`Status: ${response.status}`);
-                const result = await response.json();
+                const rawResult = await response.json();
                 
-                // On prend le premier élément si n8n renvoie un tableau
-                const data = Array.isArray(result) ? result[0] : result;
-                
-                if (data && data.hebdo) {
+                // Détection spécifique du message "Workflow was started"
+                if (rawResult && rawResult.message === "Workflow was started") {
+                    document.getElementById('ai-status').innerText = "CONFIG REQUIS";
+                    document.getElementById('ai-dot').className = "relative inline-flex rounded-full h-2 w-2 bg-orange-500";
+                    return {
+                        hebdo: "⚠️ REGLAGE N8N : Changez 'HTTP Response' pour 'Last Node' dans votre noeud Webhook.",
+                        annuel: "Le workflow n8n répond trop vite sans attendre l'IA.",
+                        devCom: "Ajuster n8n", leads: "Mode Last Node", visibilite: "n8n config"
+                    };
+                }
+
+                const data = findStrategicData(rawResult);
+                if (data && (data.hebdo || data.annuel)) {
                     document.getElementById('ai-status').innerText = "IA ACTIVE";
                     document.getElementById('ai-dot').className = "relative inline-flex rounded-full h-2 w-2 bg-emerald-500";
                     document.getElementById('ai-ping').className = "absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75";
                     return data;
                 }
-                throw new Error("Data format error");
+                throw new Error("Data not found");
             } catch (e) {
                 console.error("n8n Error", e);
-                document.getElementById('ai-status').innerText = "IA ERREUR";
+                document.getElementById('ai-status').innerText = "IA BLOQUÉE";
                 document.getElementById('ai-dot').className = "relative inline-flex rounded-full h-2 w-2 bg-red-500";
-                return null;
+                
+                return {
+                    hebdo: "❌ ERREUR DE CONNEXION (CORS) : Votre serveur n8n bloque la requête. <br><br><b>Solution :</b> Dans votre noeud Webhook n8n > Options > Response Headers, ajoutez 'Access-Control-Allow-Origin' avec la valeur '*'.",
+                    annuel: "Consultez la console du navigateur (F12) pour les détails techniques.",
+                    devCom: "Erreur Réseau", leads: "Check CORS n8n", visibilite: "n8n offline?"
+                };
             }
         }
 
@@ -181,7 +222,6 @@
                 const res = await fetch(BASE_URL);
                 const csv = await res.text();
                 const lines = csv.split('\n').filter(l => l.trim() !== "");
-                
                 let data = { rev25: Array(12).fill(0), rev26: Array(12).fill(0), fore26: Array(12).fill(0), dests: {}, comms: {}, states: { "Clos":0, "Devis Envoyés":0, "En Négociation":0, "Annulés":0 }, stats: { ca: 0, pipe: 0, vol: 0, win: 0, total: 0 }, wow: { ca: 0, pipe: 0 } };
                 const now = new Date();
                 const sDays = new Date(now.getTime() - 7*24*60*60*1000);
@@ -212,7 +252,6 @@
                         data.stats.pipe += val;
                         if (statut.includes('devis')) data.states["Devis Envoyés"] += val;
                         else data.states["En Négociation"] += val;
-                        
                         if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, win: 0, total: 0 };
                         data.comms[name].pipe += val;
                         let fDate = isNaN(dSig.getTime()) ? now : dSig;
@@ -224,7 +263,6 @@
                 });
 
                 const summary = { ca: data.stats.ca, caWow: data.wow.ca, pipe: data.stats.pipe, pipeWow: data.wow.pipe, winRate: Math.round((data.stats.win/data.stats.total)*100), avgVal: Math.round(data.stats.ca/data.stats.win) || 0, vol: data.stats.vol, count: data.stats.win, monthlyForecast: data.fore26.map(v => Math.round(v/1000)) };
-
                 updateUI(data, summary);
                 
                 const analysis = await fetchAnalysisFromN8N(summary);
@@ -248,7 +286,7 @@
             document.getElementById('kpi-conv').innerText = s.winRate + ' %';
             document.getElementById('kpi-vol').innerText = s.vol.toLocaleString();
             document.getElementById('kpi-count').innerText = s.count;
-            document.getElementById('team-table').innerHTML = Object.entries(data.comms).sort((a,b)=>b[1].ca-a[1].ca).map(([n, st]) => `<tr class="border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors"><td class="py-2 font-bold">${n}</td><td class="py-2 text-right text-cyan-400 font-mono">${st.ca.toLocaleString()} €</td><td class="py-2 text-right text-slate-400 font-mono">${st.pipe.toLocaleString()} €</td><td class="py-2 text-right font-bold text-emerald-500">${Math.round((st.win/st.total)*100)} %</td></tr>`).join('');
+            document.getElementById('team-table').innerHTML = Object.entries(data.comms).sort((a,b)=>b[1].ca-a[1].ca).map(([n, st]) => `<tr class="border-b border-slate-800/50 hover:bg-slate-800/20"><td class="py-2 font-bold">${n}</td><td class="py-2 text-right text-cyan-400 font-mono">${st.ca.toLocaleString()} €</td><td class="py-2 text-right text-slate-400 font-mono">${st.pipe.toLocaleString()} €</td><td class="py-2 text-right font-bold text-emerald-500">${Math.round((st.win/st.total)*100)} %</td></tr>`).join('');
             renderCharts(data);
         }
 
@@ -256,7 +294,6 @@
             const ctx = document.getElementById('mainChart').getContext('2d');
             if (window.myChart) window.myChart.destroy();
             window.myChart = new Chart(ctx, { type: 'line', data: { labels: ['JAN', 'FEV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOU', 'SEP', 'OCT', 'NOV', 'DEC'], datasets: [{ label: '2026', data: d.rev26.map(v=>v/1000), borderColor: '#06b6d4', tension: 0.4, borderWidth: 3 }, { label: '2025', data: d.rev25.map(v=>v/1000), borderColor: '#94a3b8', borderDash: [5, 5], tension: 0.4, borderWidth: 1 }, { label: 'Forecast', data: d.fore26.map(v=>v/1000), borderColor: '#a855f7', borderDash: [2, 4], tension: 0.4, borderWidth: 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(30, 41, 59, 0.5)' }, ticks: { color: '#94a3b8' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } });
-            
             const sCtx = document.getElementById('stateChart').getContext('2d');
             if (window.myStateChart) window.myStateChart.destroy();
             window.myStateChart = new Chart(sCtx, { type: 'doughnut', data: { labels: Object.keys(d.states), datasets: [{ data: Object.values(d.states), backgroundColor: ['#06b6d4', '#3b82f6', '#f59e0b', '#ef4444'], borderWidth: 0 }] }, options: { cutout: '70%', responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#94a3b8', boxWidth: 10, font: { size: 10 } } } } } });
