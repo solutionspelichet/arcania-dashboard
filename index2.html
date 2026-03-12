@@ -22,9 +22,6 @@
         }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
         
-        .kpi-card { transition: transform 0.2s; }
-        .kpi-card:hover { transform: translateY(-2px); }
-        
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0b1121; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
@@ -49,7 +46,7 @@
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
                 </span>
-                <span class="text-[10px] font-bold text-slate-300 uppercase tracking-tighter">Forecast IA & Stratégie Live</span>
+                <span class="text-[10px] font-bold text-slate-300 uppercase tracking-tighter">Proxy n8n Sécurisé</span>
             </div>
             <p id="last-update" class="text-[10px] text-slate-500 font-mono italic uppercase">Synchronisation...</p>
         </div>
@@ -57,27 +54,22 @@
 
     <!-- SECTION ANALYSE IA (Bilan & Stratégie) -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <!-- Bilan d'Activité & Forecast -->
         <div class="lg:col-span-2 glass-panel rounded-2xl overflow-hidden glow-cyan">
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-800/20">
-                <div class="flex items-center space-x-3">
-                    <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Précision & Forecast IA</h3>
-                </div>
+                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Précision & Forecast IA</h3>
                 <div class="flex space-x-1 bg-slate-900 p-1 rounded-lg border border-slate-700">
                     <button id="btn-hebdo" onclick="switchBilan('hebdo')" class="px-4 py-1.5 text-[10px] font-bold rounded-md transition-all bg-blue-600 text-white shadow-lg">HEBDOMADAIRE</button>
                     <button id="btn-annuel" onclick="switchBilan('annuel')" class="px-4 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-white">ANNUEL (YTD)</button>
                 </div>
             </div>
-            <div class="p-6">
-                <div id="bilan-content" class="text-slate-300 text-sm leading-relaxed space-y-4 h-[160px] overflow-y-auto pr-2">
+            <div class="p-6 h-[200px] overflow-y-auto">
+                <div id="bilan-content" class="text-slate-300 text-sm leading-relaxed space-y-4 pr-2">
                     <div class="h-4 w-3/4 loading-shimmer rounded"></div>
                     <div class="h-4 w-full loading-shimmer rounded"></div>
-                    <div class="h-4 w-5/6 loading-shimmer rounded"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Plan d'Action Stratégique -->
         <div class="glass-panel rounded-2xl glow-purple overflow-hidden">
             <div class="px-6 py-4 border-b border-slate-800 bg-slate-800/20">
                 <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Plan d'Action IA</h3>
@@ -101,144 +93,88 @@
 
     <!-- KPI GRID -->
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-        <div class="glass-panel rounded-2xl p-4 kpi-card border-b-2 border-white">
+        <div class="glass-panel rounded-2xl p-4 glow-cyan border-b-2 border-white">
             <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Ventes Clôturées</p>
             <h4 id="kpi-ca" class="text-xl font-black text-white">0 €</h4>
-            <p id="kpi-ca-comp" class="text-[9px] mt-1 text-emerald-400 font-bold">+0 € vs S-1</p>
+            <p id="kpi-ca-comp" class="text-[9px] mt-1 text-emerald-400 font-bold tracking-tighter">Chargement...</p>
         </div>
-        <div class="glass-panel rounded-2xl p-4 kpi-card border-b-2 border-purple-500 bg-purple-500/5">
-            <p class="text-[9px] font-bold text-purple-300 uppercase tracking-widest mb-1">Valeur du Pipe</p>
+        <div class="glass-panel rounded-2xl p-4 border-b-2 border-purple-500 bg-purple-500/5">
+            <p class="text-[9px] font-bold text-purple-300 uppercase tracking-widest mb-1">Forecast Pipe</p>
             <h4 id="kpi-pipe" class="text-xl font-black text-white">0 €</h4>
-            <p id="kpi-pipe-comp" class="text-[9px] mt-1 text-red-400 font-bold">-0 € vs S-1</p>
+            <p id="kpi-pipe-comp" class="text-[9px] mt-1 text-red-400 font-bold tracking-tighter">Chargement...</p>
         </div>
-        <div class="glass-panel rounded-2xl p-4 kpi-card border-b-2 border-cyan-500">
+        <div class="glass-panel rounded-2xl p-4 border-b-2 border-cyan-500">
             <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Panier Moyen</p>
             <h4 id="kpi-avg" class="text-xl font-black text-white">0 €</h4>
-            <p id="kpi-avg-comp" class="text-[9px] mt-1 text-red-400 font-bold">-0 € vs S-1</p>
+            <p id="kpi-avg-comp" class="text-[9px] mt-1 text-slate-400 tracking-tighter">Calculé / Win</p>
         </div>
-        <div class="glass-panel rounded-2xl p-4 kpi-card border-b-2 border-emerald-500">
+        <div class="glass-panel rounded-2xl p-4 border-b-2 border-emerald-500">
             <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Taux de Conv.</p>
             <h4 id="kpi-conv" class="text-xl font-black text-white">0 %</h4>
-            <p id="kpi-conv-comp" class="text-[9px] mt-1 text-emerald-400 font-bold">+0 % vs S-1</p>
+            <p id="kpi-conv-comp" class="text-[9px] mt-1 text-emerald-400 font-bold tracking-tighter">Calculé YTD</p>
         </div>
-        <div class="glass-panel rounded-2xl p-4 kpi-card border-b-2 border-blue-500">
+        <div class="glass-panel rounded-2xl p-4 border-b-2 border-blue-500">
             <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Volume (m³)</p>
             <h4 id="kpi-vol" class="text-xl font-black text-white">0</h4>
-            <p id="kpi-vol-comp" class="text-[9px] mt-1 text-emerald-400 font-bold">+0 vs S-1</p>
+            <p id="kpi-vol-comp" class="text-[9px] mt-1 text-emerald-400 font-bold tracking-tighter">Total YTD</p>
         </div>
-        <div class="glass-panel rounded-2xl p-4 kpi-card border-b-2 border-slate-400">
+        <div class="glass-panel rounded-2xl p-4 border-b-2 border-slate-400">
             <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Dossiers Clos</p>
             <h4 id="kpi-count" class="text-xl font-black text-white">0</h4>
-            <p id="kpi-count-comp" class="text-[9px] mt-1 text-emerald-400 font-bold">+0 vs S-1</p>
+            <p id="kpi-count-comp" class="text-[9px] mt-1 text-slate-400 tracking-tighter">Signatures réelles</p>
         </div>
     </div>
 
-    <!-- GRAPHIQUES -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div class="glass-panel rounded-2xl p-6">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Prévisions & Tendance du CA (K€)</h3>
-                <div class="flex space-x-4 text-[9px] font-bold uppercase text-slate-500 tracking-tight">
-                    <span class="flex items-center"><span class="w-3 h-0.5 bg-cyan-500 mr-2 shadow-[0_0_5px_#06b6d4]"></span> CA Clos 2026</span>
-                    <span class="flex items-center opacity-50"><span class="w-3 h-0.5 border-t border-dashed border-slate-400 mr-2"></span> CA Clos 2025</span>
-                    <span class="flex items-center"><span class="w-3 h-0.5 border-t border-dashed border-purple-500 mr-2"></span> Prévision Pipe 2026</span>
-                </div>
+    <!-- GRAPH CENTRAL -->
+    <div class="glass-panel rounded-2xl p-6 mb-8">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Prévisions & Tendance du CA (K€)</h3>
+            <div class="flex space-x-4 text-[9px] font-bold uppercase text-slate-500">
+                <span class="flex items-center"><span class="w-3 h-0.5 bg-cyan-500 mr-2 shadow-[0_0_5px_#06b6d4]"></span> Réel 2026</span>
+                <span class="flex items-center opacity-50"><span class="w-3 h-0.5 border-t border-dashed border-slate-400 mr-2"></span> Réel 2025</span>
+                <span class="flex items-center"><span class="w-3 h-0.5 border-t border-dashed border-purple-500 mr-2"></span> Prévision Forecast</span>
             </div>
-            <div class="h-[280px]"><canvas id="mainChart"></canvas></div>
         </div>
-        <div class="glass-panel rounded-2xl p-6">
-            <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">Top Destinations - Volume (m³)</h3>
-            <div class="h-[280px]"><canvas id="destChart"></canvas></div>
-        </div>
+        <div class="h-[300px]"><canvas id="mainChart"></canvas></div>
     </div>
 
-    <!-- PERFORMANCE & ETAT -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 glass-panel rounded-2xl p-6">
-            <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6">Performances Équipe</h3>
+    <!-- BAS DE PAGE -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="glass-panel rounded-2xl p-6">
+            <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Performances Équipe</h3>
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm border-separate border-spacing-y-2">
-                    <thead>
-                        <tr class="text-[10px] uppercase text-slate-500">
-                            <th class="pb-2 font-bold pl-2">Collaborateur</th>
-                            <th class="pb-2 font-bold text-right">CA Généré</th>
-                            <th class="pb-2 font-bold text-right">Pipe en cours</th>
-                            <th class="pb-2 font-bold text-right pr-2">Win Rate</th>
-                        </tr>
-                    </thead>
-                    <tbody id="team-table" class="text-slate-300">
-                        <!-- Rempli par JS -->
-                    </tbody>
+                <table class="w-full text-left text-xs">
+                    <thead><tr class="text-slate-500 border-b border-slate-800"><th class="pb-2">Nom</th><th class="pb-2 text-right">CA</th><th class="pb-2 text-right">Pipe</th><th class="pb-2 text-right">Win%</th></tr></thead>
+                    <tbody id="team-table" class="text-slate-300"></tbody>
                 </table>
             </div>
         </div>
-        <div class="glass-panel rounded-2xl p-6 flex flex-col items-center">
-            <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6 w-full text-left">Valeur Financière par État</h3>
-            <div class="relative w-48 h-48">
-                <canvas id="stateChart"></canvas>
-            </div>
-            <div id="state-legend" class="mt-6 w-full grid grid-cols-2 gap-2 text-[10px] font-bold">
-                <!-- Rempli par JS -->
-            </div>
+        <div class="glass-panel rounded-2xl p-6">
+            <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-4">Top Destinations (m³)</h3>
+            <div class="h-[200px]"><canvas id="destChart"></canvas></div>
         </div>
     </div>
 
     <script>
-        const apiKey = ""; 
+        // CONFIGURATION PRODUCTION
         const BASE_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQbuJa036t_m_LhDX5RXHBNPexD9jKcR54qlGFKA-wzxwuUS67TOdYk8euyhlXAspySvKaf8-kUmI6I/pub?gid=0&single=true&output=csv';
+        const N8N_WEBHOOK_URL = 'VOTRE_URL_WEBHOOK_N8N_ICI'; // <-- À remplacer par votre URL de production n8n
 
-        let currentDataSummary = null;
-        let aiReports = { hebdo: "Calcul des prévisions...", annuel: "Calcul des prévisions..." };
+        let aiReports = { hebdo: "Analyse en attente...", annuel: "Analyse en attente..." };
         let activeBilan = 'hebdo';
 
-        async function fetchGeminiAnalysis(summary) {
-            const systemPrompt = `Tu es le Directeur Commercial Stratégique d'Arcania. 
-            Analyse les données fournies et renvoie un JSON strictement valide avec les clés: "hebdo", "annuel", "devCom", "leads", "visibilite".
-            IMPORTANT : Tu dois commenter le FORECAST mensuel (prévisions de signature).
-            Données de Forecast mensuel : ${JSON.stringify(summary.monthlyForecast)}
-            Commente spécifiquement le "pic" ou le "creux" prévisionnel et donne un TIMING pour l'atterrissage financier.`;
-
-            const userPrompt = `Données CRM Snapshot :
-            - CA Total 2026 : ${summary.ca.toLocaleString()} € (+${summary.caWow.toLocaleString()} € vs S-1)
-            - Pipeline Actif : ${summary.pipe.toLocaleString()} € (${summary.pipeWow.toLocaleString()} € vs S-1)
-            - Panier Moyen : ${summary.avgVal.toLocaleString()} €
-            - Conversion : ${summary.winRate}% (+${summary.winRateWow}% vs S-1)
-            - Top Dest : ${summary.topDest}
-            - Forecast Mensuel : ${summary.monthlyForecast.join(', ')} K€
-            Analyse les prévisions et rédige le plan d'action.`;
-
-            const payload = {
-                contents: [{ parts: [{ text: userPrompt }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            hebdo: { type: "STRING" },
-                            annuel: { type: "STRING" },
-                            devCom: { type: "STRING" },
-                            leads: { type: "STRING" },
-                            visibilite: { type: "STRING" }
-                        }
-                    }
-                }
-            };
-
-            const delays = [1000, 2000, 4000];
-            for (let i = 0; i <= delays.length; i++) {
-                try {
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                    const result = await response.json();
-                    return JSON.parse(result.candidates[0].content.parts[0].text);
-                } catch (e) {
-                    if (i === delays.length) return null;
-                    await new Promise(r => setTimeout(r, delays[i]));
-                }
+        async function fetchAnalysisFromN8N(summary) {
+            try {
+                const response = await fetch(N8N_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(summary)
+                });
+                if (!response.ok) throw new Error("n8n Offline");
+                return await response.json();
+            } catch (e) {
+                console.error("n8n Proxy Error", e);
+                return null;
             }
         }
 
@@ -246,7 +182,7 @@
             activeBilan = type;
             document.getElementById('btn-hebdo').className = type === 'hebdo' ? 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all bg-blue-600 text-white shadow-lg' : 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-white';
             document.getElementById('btn-annuel').className = type === 'annuel' ? 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all bg-blue-600 text-white shadow-lg' : 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-white';
-            document.getElementById('bilan-content').innerHTML = `<p class="text-slate-300">${aiReports[type]}</p>`;
+            document.getElementById('bilan-content').innerHTML = `<p class="text-slate-300 italic">${aiReports[type]}</p>`;
         }
 
         async function init() {
@@ -257,87 +193,59 @@
                 const lines = csv.split('\n').filter(l => l.trim() !== "");
                 
                 let data = {
-                    rev2025: Array(12).fill(0),
-                    rev2026: Array(12).fill(0),
-                    forecast2026: Array(12).fill(0),
-                    dests: {}, comms: {},
-                    states: { "Clos": 0, "Devis Envoyés": 0, "En Négociation": 0, "Annulés": 0 },
-                    stats: { ca: 0, pipe: 0, vol: 0, wins: 0, count: 0 },
-                    wow: { ca: 0, pipe: 0, avg: 0, conv: 0, vol: 0, count: 0 }
+                    rev25: Array(12).fill(0), rev26: Array(12).fill(0), fore26: Array(12).fill(0),
+                    dests: {}, comms: {}, stats: { ca: 0, pipe: 0, vol: 0, win: 0, total: 0 },
+                    wow: { ca: 0, pipe: 0 }
                 };
 
-                const today = new Date();
-                const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-                const fourteenDaysAgo = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
+                const now = new Date();
+                const sDays = new Date(now.getTime() - 7*24*60*60*1000);
 
                 lines.slice(1).forEach(l => {
                     const c = l.split(',');
-                    if (c.length < 6) return;
-                    
-                    const statut = (c[4] || "").toLowerCase();
-                    const val = parseFloat(c[5]) || 0;
-                    const vol = parseFloat(c[6]) || 0;
-                    const name = c[3] || "Inconnu";
-                    const dest = (c[8] || "AUTRE").toUpperCase();
-                    const dateSig = new Date(c[2]);
-                    const dateCre = new Date(c[1]);
+                    const statut = (c[4]||"").toLowerCase();
+                    const val = parseFloat(c[5])||0;
+                    const vol = parseFloat(c[6])||0;
+                    const name = c[3]||"Inconnu";
+                    const dest = (c[8]||"AUTRE").toUpperCase();
+                    const dSig = new Date(c[2]);
 
                     if (statut.includes('gagné') || statut.includes('clos')) {
-                        data.stats.ca += val; data.stats.wins++;
-                        data.stats.vol += vol;
-                        data.states["Clos"] += val;
-                        if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, wins: 0, total: 0 };
-                        data.comms[name].ca += val;
-                        data.comms[name].wins++;
-                        data.dests[dest] = (data.dests[dest] || 0) + vol;
-                        if (!isNaN(dateSig.getTime())) {
-                            if (dateSig.getFullYear() === 2025) data.rev2025[dateSig.getMonth()] += val;
-                            if (dateSig.getFullYear() === 2026) data.rev2026[dateSig.getMonth()] += val;
+                        data.stats.ca += val; data.stats.win++; data.stats.vol += vol;
+                        if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, win: 0, total: 0 };
+                        data.comms[name].ca += val; data.comms[name].win++;
+                        data.dests[dest] = (data.dests[dest]||0) + vol;
+                        if (!isNaN(dSig.getTime())) {
+                            if (dSig.getFullYear() === 2025) data.rev25[dSig.getMonth()] += val;
+                            if (dSig.getFullYear() === 2026) data.rev26[dSig.getMonth()] += val;
                         }
-                        if (dateSig >= sevenDaysAgo) {
-                            data.wow.ca += val; data.wow.vol += vol; data.wow.count++;
-                        } else if (dateSig >= fourteenDaysAgo) {
-                            data.wow.ca -= val; data.wow.vol -= vol; data.wow.count--;
-                        }
-                    } else if (statut.includes('annulé') || statut.includes('perdu')) {
-                        data.states["Annulés"] += val;
-                    } else {
+                        if (dSig >= sDays) data.wow.ca += val;
+                    } else if (statut.includes('cours') || statut.includes('devis') || statut.includes('négo')) {
                         data.stats.pipe += val;
-                        if (statut.includes('devis')) data.states["Devis Envoyés"] += val;
-                        else data.states["En Négociation"] += val;
-                        
-                        if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, wins: 0, total: 0 };
+                        if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, win: 0, total: 0 };
                         data.comms[name].pipe += val;
-
-                        // Forecast basé sur Date_Signature attendue (si renseignée) ou Date_Creation + 30j
-                        let forecastDate = isNaN(dateSig.getTime()) ? new Date(dateCre.getTime() + 30*24*60*60*1000) : dateSig;
-                        if (forecastDate.getFullYear() === 2026) {
-                            data.forecast2026[forecastDate.getMonth()] += val;
-                        }
-
-                        if (dateCre >= sevenDaysAgo) data.wow.pipe += val;
-                        else if (dateCre >= fourteenDaysAgo) data.wow.pipe -= val;
+                        let fDate = isNaN(dSig.getTime()) ? now : dSig;
+                        if (fDate.getFullYear() === 2026) data.fore26[fDate.getMonth()] += val;
+                        data.wow.pipe += val;
                     }
                     if (data.comms[name]) data.comms[name].total++;
-                    data.stats.count++;
+                    data.stats.total++;
                 });
 
-                currentDataSummary = {
+                const summary = {
                     ca: data.stats.ca, caWow: data.wow.ca,
                     pipe: data.stats.pipe, pipeWow: data.wow.pipe,
-                    winRate: Math.round((data.stats.wins/data.stats.count)*100),
-                    winRateWow: 8, // Simulé pour l'UI
-                    avgVal: Math.round(data.stats.ca/data.stats.wins) || 0,
-                    avgValWow: -460, // Simulé
-                    topDest: Object.entries(data.dests).sort((a,b) => b[1]-a[1])[0]?.[0] || "N/A",
-                    vol: data.stats.vol, volWow: data.wow.vol,
-                    count: data.stats.wins, countWow: data.wow.count,
-                    monthlyForecast: data.forecast2026.map(v => Math.round(v/1000))
+                    winRate: Math.round((data.stats.win/data.stats.total)*100),
+                    avgVal: Math.round(data.stats.ca/data.stats.win) || 0,
+                    topDest: Object.entries(data.dests).sort((a,b)=>b[1]-a[1])[0]?.[0] || "N/A",
+                    vol: data.stats.vol, count: data.stats.win,
+                    monthlyForecast: data.fore26.map(v => Math.round(v/1000))
                 };
 
-                updateUI(data, currentDataSummary);
+                updateUI(data, summary);
                 
-                const analysis = await fetchGeminiAnalysis(currentDataSummary);
+                // APPEL N8N PROXY
+                const analysis = await fetchAnalysisFromN8N(summary);
                 if (analysis) {
                     aiReports = { hebdo: analysis.hebdo, annuel: analysis.annuel };
                     document.getElementById('strat-devcom').innerText = analysis.devCom;
@@ -346,85 +254,56 @@
                     switchBilan(activeBilan);
                 }
 
-                document.getElementById('last-update').innerText = `DERNIÈRE ANALYSE : ${new Date().toLocaleTimeString().toUpperCase()}`;
+                document.getElementById('last-update').innerText = `MAJ : ${new Date().toLocaleTimeString().toUpperCase()}`;
 
             } catch (err) { console.error(err); }
         }
 
-        function updateUI(data, summary) {
-            document.getElementById('kpi-ca').innerText = summary.ca.toLocaleString() + ' €';
-            document.getElementById('kpi-ca-comp').innerText = `${summary.caWow >= 0 ? '+' : ''}${summary.caWow.toLocaleString()} € vs S-1`;
-            
-            document.getElementById('kpi-pipe').innerText = summary.pipe.toLocaleString() + ' €';
-            document.getElementById('kpi-pipe-comp').innerText = `${summary.pipeWow >= 0 ? '+' : ''}${summary.pipeWow.toLocaleString()} € vs S-1`;
-            document.getElementById('kpi-pipe-comp').className = `text-[9px] mt-1 font-bold ${summary.pipeWow >= 0 ? 'text-emerald-400' : 'text-red-400'}`;
+        function updateUI(data, s) {
+            document.getElementById('kpi-ca').innerText = s.ca.toLocaleString() + ' €';
+            document.getElementById('kpi-ca-comp').innerText = `+${s.caWow.toLocaleString()} € vs S-1`;
+            document.getElementById('kpi-pipe').innerText = s.pipe.toLocaleString() + ' €';
+            document.getElementById('kpi-pipe-comp').innerText = `${s.pipeWow >= 0 ? '+' : ''}${s.pipeWow.toLocaleString()} € vs S-1`;
+            document.getElementById('kpi-avg').innerText = s.avgVal.toLocaleString() + ' €';
+            document.getElementById('kpi-conv').innerText = s.winRate + ' %';
+            document.getElementById('kpi-vol').innerText = s.vol.toLocaleString();
+            document.getElementById('kpi-count').innerText = s.count;
 
-            document.getElementById('kpi-avg').innerText = summary.avgVal.toLocaleString() + ' €';
-            document.getElementById('kpi-avg-comp').innerText = `${summary.avgValWow >= 0 ? '+' : ''}${summary.avgValWow.toLocaleString()} € vs S-1`;
-            
-            document.getElementById('kpi-conv').innerText = summary.winRate + ' %';
-            document.getElementById('kpi-conv-comp').innerText = `+${summary.winRateWow}% vs S-1`;
-            
-            document.getElementById('kpi-vol').innerText = summary.vol.toLocaleString();
-            document.getElementById('kpi-vol-comp').innerText = `+${summary.volWow.toLocaleString()} vs S-1`;
-            
-            document.getElementById('kpi-count').innerText = summary.count;
-            document.getElementById('kpi-count-comp').innerText = `+${summary.countWow} vs S-1`;
-
-            const tbody = document.getElementById('team-table');
-            tbody.innerHTML = Object.entries(data.comms).sort((a,b) => b[1].ca - a[1].ca).map(([name, s]) => `
-                <tr class="bg-slate-800/20 hover:bg-slate-800/40 transition-colors">
-                    <td class="py-2 pl-2 font-bold text-white text-xs">${name}</td>
-                    <td class="py-2 text-right text-cyan-400 font-mono text-xs">${s.ca.toLocaleString()} €</td>
-                    <td class="py-2 text-right text-purple-400 font-mono text-xs">${s.pipe.toLocaleString()} €</td>
-                    <td class="py-2 text-right font-bold text-emerald-500 text-xs pr-2">${Math.round((s.wins/s.total)*100)} %</td>
+            document.getElementById('team-table').innerHTML = Object.entries(data.comms).sort((a,b)=>b[1].ca-a[1].ca).map(([n, st]) => `
+                <tr class="border-b border-slate-800/50 hover:bg-slate-800/20">
+                    <td class="py-2 font-bold">${n}</td>
+                    <td class="py-2 text-right text-cyan-400 font-mono">${st.ca.toLocaleString()} €</td>
+                    <td class="py-2 text-right text-slate-400 font-mono">${st.pipe.toLocaleString()} €</td>
+                    <td class="py-2 text-right font-bold text-emerald-500">${Math.round((st.win/st.total)*100)} %</td>
                 </tr>
             `).join('');
 
             renderCharts(data);
         }
 
-        function renderCharts(data) {
+        function renderCharts(d) {
             new Chart(document.getElementById('mainChart').getContext('2d'), {
                 type: 'line',
                 data: {
                     labels: ['JAN', 'FEV', 'MAR', 'AVR', 'MAI', 'JUN', 'JUL', 'AOU', 'SEP', 'OCT', 'NOV', 'DEC'],
                     datasets: [
-                        { label: '2026 Real', data: data.rev2026.map(v => v/1000), borderColor: '#06b6d4', tension: 0.4, borderWidth: 3, pointRadius: 4 },
-                        { label: '2025 Real', data: data.rev2025.map(v => v/1000), borderColor: '#94a3b8', borderDash: [5, 5], tension: 0.4, borderWidth: 1, pointRadius: 0 },
-                        { label: '2026 Forecast', data: data.forecast2026.map(v => v/1000), borderColor: '#a855f7', borderDash: [2, 4], tension: 0.4, borderWidth: 2, pointRadius: 4 }
+                        { label: '2026', data: d.rev26.map(v=>v/1000), borderColor: '#06b6d4', tension: 0.4, borderWidth: 3 },
+                        { label: '2025', data: d.rev25.map(v=>v/1000), borderColor: '#94a3b8', borderDash: [5, 5], tension: 0.4, borderWidth: 1 },
+                        { label: 'Forecast', data: d.fore26.map(v=>v/1000), borderColor: '#a855f7', borderDash: [2, 4], tension: 0.4, borderWidth: 2 }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: 'rgba(51, 65, 85, 0.2)' }, ticks: { color: '#64748b' } }, x: { grid: { display: false }, ticks: { color: '#64748b' } } } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: '#1e293b' } }, x: { grid: { display: false } } } }
             });
 
-            const destEntries = Object.entries(data.dests).sort((a,b) => b[1]-a[1]).slice(0, 5);
+            const topD = Object.entries(d.dests).sort((a,b)=>b[1]-a[1]).slice(0, 5);
             new Chart(document.getElementById('destChart').getContext('2d'), {
                 type: 'bar',
                 data: {
-                    labels: destEntries.map(e => e[0]),
-                    datasets: [{ data: destEntries.map(e => e[1]), backgroundColor: 'rgba(243, 146, 0, 0.7)', borderRadius: 4 }]
+                    labels: topD.map(e => e[0]),
+                    datasets: [{ data: topD.map(e => e[1]), backgroundColor: '#f39200', borderRadius: 4 }]
                 },
                 options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
             });
-
-            const stateColors = ['#06b6d4', '#3b82f6', '#f39200', '#ef4444'];
-            new Chart(document.getElementById('stateChart').getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(data.states),
-                    datasets: [{ data: Object.values(data.states), backgroundColor: stateColors, borderWidth: 0 }]
-                },
-                options: { cutout: '75%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
-
-            const legend = document.getElementById('state-legend');
-            legend.innerHTML = Object.entries(data.states).map(([label, val], i) => `
-                <div class="flex items-center space-x-2">
-                    <span class="w-2 h-2 rounded-full" style="background:${stateColors[i]}"></span>
-                    <span class="text-slate-400 truncate">${label}</span>
-                </div>
-            `).join('');
         }
 
         window.onload = init;
