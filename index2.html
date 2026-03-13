@@ -429,32 +429,36 @@
             try {
                 document.getElementById('ai-status').innerText = 'INITIALISATION...';
                 
-                // ── ÉTAPE 1 : Charger données embarquées (toujours correctes) ──
-                let rows = EMBEDDED_DATA;
+                // ── LECTURE GOOGLE SHEET (source unique de vérité) ──
                 document.getElementById('ai-status').innerText = 'LECTURE DES DONNÉES...';
 
-                // ── ÉTAPE 2 : Essayer de charger depuis Google Sheet (override si propre) ──
+                function parseCSVLine(line) {
+                    const result=[]; let cur=''; let inQ=false;
+                    for(let i=0;i<line.length;i++){
+                        if(line[i]==='"'){inQ=!inQ;}
+                        else if(line[i]===','&&!inQ){result.push(cur.trim());cur='';}
+                        else{cur+=line[i];}
+                    }
+                    result.push(cur.trim()); return result;
+                }
+
+                let rows = [];
+                let sheetStatus = 'ok';
+
                 try {
-                    const res = await fetch(BASE_URL);
+                    const res = await fetch(BASE_URL + '&t=' + Date.now()); // cache bust
                     const csv = await res.text();
                     const csvLines = csv.split('\n').filter(l => l.trim());
-                    if (csvLines.length > 10) {
-                        function parseCSVLine(line) {
-                            const result=[]; let cur=''; let inQ=false;
-                            for(let i=0;i<line.length;i++){
-                                if(line[i]==='"'){inQ=!inQ;}
-                                else if(line[i]===','&&!inQ){result.push(cur.trim());cur='';}
-                                else{cur+=line[i];}
-                            }
-                            result.push(cur.trim()); return result;
-                        }
+
+                    if (csvLines.length <= 1) {
+                        sheetStatus = 'empty';
+                    } else {
                         const hCols = parseCSVLine(csvLines[0]).map(h=>h.replace(/"/g,'').trim());
                         const idx   = {};
                         hCols.forEach((h,i) => idx[h]=i);
                         const col    = (c,n,fb) => { const i=idx[n]; return i!==undefined?(c[i]||''):(c[fb]||''); };
                         const colNum = (c,n,fb) => { let s=col(c,n,fb).replace(/[' ]/g,'').replace(',','.').replace(/[^0-9.-]/g,''); return parseFloat(s)||0; };
-                        
-                        const rawRows = [];
+
                         const seen = new Set();
                         csvLines.slice(1).forEach(l => {
                             if(!l.trim()) return;
@@ -462,28 +466,65 @@
                             const id = col(c,'ID_Dossier',0);
                             if(!id || seen.has(id)) return;
                             seen.add(id);
-                            rawRows.push({ i:id, dc:col(c,'Date_Creation',1), ds:col(c,'Date_Signature',2),
-                                c:col(c,'Commercial',3)||'Inconnu', s:col(c,'Statut_Dossier',4),
-                                sg:col(c,'Segment',5)||'Particulier', tc:col(c,'Type_Client',6)||'',
-                                m:colNum(c,'Montant_HT',7), mg:colNum(c,'Marge_HT',8),
-                                tm:colNum(c,'Taux_Marge_Pct',9), v:colNum(c,'Volume_m3',10),
-                                op:col(c,'Origine_Pays',11), dp:col(c,'Destination_Pays',12) });
+                            rows.push({
+                                i:id,
+                                dc:col(c,'Date_Creation',1),
+                                ds:col(c,'Date_Signature',2),
+                                c:col(c,'Commercial',3)||'Inconnu',
+                                s:col(c,'Statut_Dossier',4),
+                                sg:col(c,'Segment',5)||'Particulier',
+                                tc:col(c,'Type_Client',6)||'',
+                                m:colNum(c,'Montant_HT',7),
+                                mg:colNum(c,'Marge_HT',8),
+                                tm:colNum(c,'Taux_Marge_Pct',9),
+                                v:colNum(c,'Volume_m3',10),
+                                op:col(c,'Origine_Pays',11),
+                                dp:col(c,'Destination_Pays',12)
+                            });
                         });
-                        
-                        // Valider que les données du sheet semblent correctes
-                        const sheetCA = rawRows.filter(r=>(r.s||'').toLowerCase().includes('gagn')).reduce((s,r)=>s+r.m,0);
-                        if (rawRows.length >= 250 && rawRows.length <= 350 && sheetCA > 500000 && sheetCA < 2000000) {
-                            rows = rawRows;
-                            console.log('Sheet propre chargé: ' + rawRows.length + ' dossiers, CA=' + Math.round(sheetCA));
-                        } else {
-                            console.log('Sheet ignore (corrompu): ' + rawRows.length + ' lignes, CA=' + Math.round(sheetCA) + ' → données embarquées utilisées');
-                        }
+
+                        console.log('Sheet chargé: ' + rows.length + ' dossiers uniques (sur ' + (csvLines.length-1) + ' lignes brutes)');
+
+                        if (rows.length === 0) sheetStatus = 'empty';
+                        else if (rows.length > 500) sheetStatus = 'corrupted'; // trop de doublons
                     }
                 } catch(sheetErr) {
-                    console.log('Sheet indisponible, données embarquées utilisées');
+                    console.error('Erreur lecture sheet:', sheetErr);
+                    sheetStatus = 'error';
                 }
 
-                // ── ÉTAPE 3 : Calculer ──
+                // ── GESTION ÉTATS ──
+                if (sheetStatus === 'empty') {
+                    document.getElementById('ai-status').innerText = 'EN ATTENTE';
+                    document.getElementById('bilan-content').innerHTML = 
+                        '<div class="text-center py-6">' +
+                        '<p class="text-slate-400 text-sm font-bold mb-2">⏳ Google Sheet vide</p>' +
+                        '<p class="text-slate-500 text-xs">Déposez votre fichier Excel dans le dossier Drive<br>' +
+                        '"import files arcania" pour lancer la synchronisation.</p>' +
+                        '</div>';
+                    updateUI({ comms:{}, segs:{ Particulier:{ca:0,pipe:0,marge:0,win:0,total:0}, Professionnel:{ca:0,pipe:0,marge:0,win:0,total:0}, Manutention_Lourde:{ca:0,pipe:0,marge:0,win:0,total:0} }, dests:{}, states:{ Clos:0,"Devis Envoyés":0,"En Négociation":0,Annulés:0 }, stats:{ca:0,pipe:0,vol:0,win:0,total:0,marge:0,pertes:0}, wow:{ca:0,pipe:0}, nouveaux:{ca:0,n:0}, existants:{ca:0,n:0}, rev25:Array(12).fill(0), rev26:Array(12).fill(0), fore26:Array(12).fill(0) }, buildSummary({stats:{ca:0,pipe:0,vol:0,win:0,total:0,marge:0,pertes:0},wow:{ca:0,pipe:0},segs:{Particulier:{ca:0,pipe:0,marge:0,win:0},Professionnel:{ca:0,pipe:0,marge:0,win:0},Manutention_Lourde:{ca:0,pipe:0,marge:0,win:0}},comms:{},nouveaux:{ca:0,n:0},existants:{ca:0,n:0},fore26:Array(12).fill(0)}));
+                    document.getElementById('last-update').innerText = 'Sheet vide — en attente de données';
+                    return;
+                }
+
+                if (sheetStatus === 'corrupted') {
+                    document.getElementById('bilan-content').innerHTML =
+                        '<div class="p-3 bg-red-900/20 border border-red-500/30 rounded-lg">' +
+                        '<p class="text-red-400 text-xs font-bold mb-1">⚠️ Google Sheet corrompu (' + rows.length + ' doublons détectés)</p>' +
+                        '<p class="text-slate-400 text-[10px]">1. Ouvrez le Google Sheet<br>' +
+                        '2. Sélectionnez toutes les lignes sauf la ligne 1<br>' +
+                        '3. Supprimez-les<br>' +
+                        '4. Déposez votre Excel dans le dossier Drive pour relancer la sync</p>' +
+                        '</div>';
+                    // Continuer quand même avec les données dédupliquées
+                }
+
+                if (sheetStatus === 'error') {
+                    document.getElementById('bilan-content').innerHTML =
+                        '<p class="text-amber-400 text-xs">⚠️ Impossible de lire le Google Sheet. Vérifiez que le partage est public (Fichier > Partager > Tout le monde avec le lien).</p>';
+                }
+
+                // ── CALCUL & AFFICHAGE ──
                 const { data } = processRows(rows);
                 const summary  = buildSummary(data);
                 updateUI(data, summary);
