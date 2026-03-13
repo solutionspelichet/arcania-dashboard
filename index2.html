@@ -133,8 +133,17 @@
             if (!obj || depth > 10) return null;
             if (typeof obj === 'string') {
                 try {
-                    let clean = obj.replace(/```json/g, "").replace(/```/g, "").trim();
-                    if (clean.startsWith('{') || clean.startsWith('[')) return findStrategicData(JSON.parse(clean), depth + 1);
+                    let clean = obj.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const si = clean.indexOf('{'), ei = clean.lastIndexOf('}');
+                    if (si >= 0) {
+                        const js2 = ei > si ? clean.slice(si, ei+1) : clean.slice(si);
+                        try { return findStrategicData(JSON.parse(js2), depth + 1); }
+                        catch(e2) {
+                            const op=(js2.match(/\{/g)||[]).length, cl=(js2.match(/\}/g)||[]).length;
+                            const rep = js2.replace(/,\s*$/,'') + '}'.repeat(Math.max(0,op-cl));
+                            return findStrategicData(JSON.parse(rep), depth + 1);
+                        }
+                    }
                 } catch(e) {}
                 return null;
             }
@@ -175,7 +184,26 @@
                 });
                 
                 if (!response.ok) throw new Error(`Status: ${response.status}`);
-                const rawResult = await response.json();
+                // Lire comme texte pour réparer les JSON tronqués (maxTokens)
+                let rawText = await response.text();
+                function repairJSON(s) {
+                    s = s.trim();
+                    const si = s.indexOf('{'), ei = s.lastIndexOf('}');
+                    if (si >= 0 && ei > si) return s.slice(si, ei + 1);
+                    if (si >= 0) {
+                        let p = s.slice(si).replace(/,\s*$/, '');
+                        const op = (p.match(/\{/g)||[]).length, cl = (p.match(/\}/g)||[]).length;
+                        return p + '}'.repeat(Math.max(0, op - cl));
+                    }
+                    return s;
+                }
+                let rawResult;
+                try { rawResult = JSON.parse(rawText); }
+                catch(pe) {
+                    console.warn('JSON repair attempt:', pe.message);
+                    try { rawResult = JSON.parse(repairJSON(rawText)); console.log('JSON repaired OK'); }
+                    catch(re) { throw new Error('JSON non réparable: ' + pe.message); }
+                }
                 
                 // Détection spécifique du message "Workflow was started"
                 if (rawResult && rawResult.message === "Workflow was started") {
@@ -198,7 +226,7 @@
                 throw new Error("Data not found");
             } catch (e) {
                 console.error("n8n Error", e);
-                document.getElementById('ai-status').innerText = "IA BLOQUÉE";
+                window._lastAIError = e.message; document.getElementById('ai-status').innerText = "ERREUR IA";
                 document.getElementById('ai-dot').className = "relative inline-flex rounded-full h-2 w-2 bg-red-500";
                 
                 return {
