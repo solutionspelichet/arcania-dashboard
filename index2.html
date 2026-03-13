@@ -222,36 +222,13 @@
                 const res = await fetch(BASE_URL);
                 const csv = await res.text();
                 const lines = csv.split('\n').filter(l => l.trim() !== "");
-                let data = { 
-                    rev25: Array(12).fill(0), rev26: Array(12).fill(0), fore26: Array(12).fill(0), 
-                    dests: {}, comms: {}, 
-                    states: { "Clos":0, "Devis Envoyés":0, "En Négociation":0, "Annulés":0 }, 
-                    stats: { ca: 0, pipe: 0, vol: 0, win: 0, total: 0, marge: 0, pertes: 0 }, 
-                    wow: { ca: 0, pipe: 0 },
-                    segs: { 
-                        Particulier: { ca: 0, pipe: 0, marge: 0, win: 0, total: 0 },
-                        Professionnel: { ca: 0, pipe: 0, marge: 0, win: 0, total: 0 },
-                        Manutention_Lourde: { ca: 0, pipe: 0, marge: 0, win: 0, total: 0 }
-                    },
-                    nouveaux: { ca: 0, n: 0 }, existants: { ca: 0, n: 0 }
-                };
                 const now = new Date();
-                const CURRENT_YEAR = now.getFullYear();
                 const sDays = new Date(now.getTime() - 7*24*60*60*1000);
 
-                // ── Parser CSV robuste basé sur les noms de colonnes ──
-                const headerCols = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,''));
-                const idx = {};
-                headerCols.forEach((h, i) => idx[h] = i);
-
-                // Helper : lire une colonne par nom, avec fallback sur ancien index
-                const col = (c, name, fallback) => {
-                    const i = idx[name];
-                    return i !== undefined ? (c[i]||'') : (c[fallback]||'');
-                };
-                const colNum = (c, name, fallback) => parseFloat(col(c, name, fallback).replace(/[^0-9.-]/g,'')) || 0;
-
-                // Parser ligne CSV en gérant les champs entre guillemets
+                // ══════════════════════════════════════════════
+                // PARSER CSV avec DÉDUPLICATION par ID_Dossier
+                // Gère les sheets avec doublons massifs
+                // ══════════════════════════════════════════════
                 function parseCSVLine(line) {
                     const result = []; let cur = ''; let inQ = false;
                     for (let i = 0; i < line.length; i++) {
@@ -263,103 +240,121 @@
                     return result;
                 }
 
+                // Headers → index map
+                const headerCols = parseCSVLine(lines[0]).map(h => h.replace(/"/g,'').trim());
+                const idx = {};
+                headerCols.forEach((h, i) => idx[h] = i);
+                const col    = (c, name, fb) => { const i = idx[name]; return i !== undefined ? (c[i]||'') : (c[fb]||''); };
+                const colNum = (c, name, fb) => { 
+                    let s = col(c, name, fb).replace(/[''\s]/g,'').replace(',','.').replace(/[^0-9.-]/g,'');
+                    return parseFloat(s) || 0;
+                };
+
+                // ── ÉTAPE 1 : Parser toutes les lignes en objets ──
+                const rawRows = [];
                 lines.slice(1).forEach(l => {
+                    if (!l.trim()) return;
                     const c = parseCSVLine(l);
-                    const statut = col(c, 'Statut_Dossier', 4).toLowerCase();
-                    const val    = colNum(c, 'Montant_HT', 5);
-                    const vol    = colNum(c, 'Volume_m3', 6);
-                    const name   = col(c, 'Commercial', 3) || 'Inconnu';
-                    const dest   = (col(c, 'Destination_Pays', 8) || 'AUTRE').toUpperCase();
-                    const dSig   = new Date(col(c, 'Date_Signature', 2));
-
-                    const seg   = col(c, 'Segment', 5) || 'Particulier';
-                    const marge = colNum(c, 'Marge_HT', 8);
-                    const typeC = col(c, 'Type_Client', 6);
-                    const segKey = seg.replace(' ','_');
-
-                    // Année du dossier (basé sur Date_Creation)
-                    const dCreate2 = new Date(col(c, 'Date_Creation', 1));
-                    const dossierYear = !isNaN(dCreate2.getTime()) ? dCreate2.getFullYear() : 0;
-                    const isYTD = (dossierYear === CURRENT_YEAR);
-
-                    if (statut.includes('gagné') || statut.includes('clos')) {
-                        data.states["Clos"] += val;
-                        // Charts historiques (toutes années)
-                        if (dossierYear === 2025) data.rev25[(!isNaN(dSig.getTime()) ? dSig.getMonth() : 0)] += val;
-                        if (dossierYear === 2026) data.rev26[(!isNaN(dSig.getTime()) ? dSig.getMonth() : 0)] += val;
-                        // KPIs YTD uniquement (année en cours)
-                        if (isYTD) {
-                            data.stats.ca += val; data.stats.win++; data.stats.vol += vol; data.stats.marge += marge;
-                            if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, win: 0, total: 0, marge: 0 };
-                            data.comms[name].ca += val; data.comms[name].win++; data.comms[name].marge += marge;
-                            data.dests[dest] = (data.dests[dest]||0) + vol;
-                            if (data.segs[segKey]) { data.segs[segKey].ca += val; data.segs[segKey].marge += marge; data.segs[segKey].win++; }
-                            if (typeC.toLowerCase().includes('nouveau')) { data.nouveaux.ca += val; data.nouveaux.n++; }
-                            else { data.existants.ca += val; data.existants.n++; }
-                            if (dSig >= sDays) data.wow.ca += val;
-                        }
-                    } else if (statut.includes('annulé') || statut.includes('perdu')) {
-                        data.states["Annulés"] += val; data.stats.pertes += val;
-                    } else {
-                        data.stats.pipe += val;
-                        if (statut.includes('devis')) data.states["Devis Envoyés"] += val;
-                        else data.states["En Négociation"] += val;
-                        if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, win: 0, total: 0, marge: 0 };
-                        data.comms[name].pipe += val;
-                        if (data.segs[segKey]) data.segs[segKey].pipe += val;
-                        let fDate = isNaN(dSig.getTime()) ? now : dSig;
-                        if (fDate.getFullYear() === 2026) data.fore26[fDate.getMonth()] += val;
-                        const dCreate = new Date(col(c, 'Date_Creation', 1));
-                        if (!isNaN(dCreate.getTime()) && dCreate >= sDays) data.wow.pipe += val;
-                    }
-                    if (data.segs[segKey]) data.segs[segKey].total++;
-                    if (data.comms[name]) data.comms[name].total++;
-                    data.stats.total++;
+                    const id = col(c, 'ID_Dossier', 0);
+                    if (!id || id === 'ID_Dossier') return; // skip header dupliqué
+                    rawRows.push({
+                        id,
+                        dateCreation : col(c, 'Date_Creation', 1),
+                        dateSignature: col(c, 'Date_Signature', 2),
+                        commercial   : col(c, 'Commercial', 3) || 'Inconnu',
+                        statut       : col(c, 'Statut_Dossier', 4).toLowerCase(),
+                        segment      : col(c, 'Segment', 5) || 'Particulier',
+                        typeClient   : col(c, 'Type_Client', 6) || '',
+                        montant      : colNum(c, 'Montant_HT', 7),
+                        marge        : colNum(c, 'Marge_HT', 8),
+                        tauxMarge    : colNum(c, 'Taux_Marge_Pct', 9),
+                        volume       : colNum(c, 'Volume_m3', 10),
+                        origine      : col(c, 'Origine_Pays', 11) || 'CH',
+                        destination  : (col(c, 'Destination_Pays', 12) || 'AUTRE').toUpperCase(),
+                    });
                 });
 
-                const tauxMarge = data.stats.ca > 0 ? Math.round(data.stats.marge/data.stats.ca*100) : 0;
-                const topComm = Object.entries(data.comms).sort((a,b)=>b[1].ca-a[1].ca)[0];
-                const topPipe = Object.entries(data.comms).sort((a,b)=>b[1].pipe-a[1].pipe)[0];
-                const summary = { 
-                    // KPIs globaux
-                    ca_ytd: Math.round(data.stats.ca),
-                    ca_semaine: Math.round(data.wow.ca),
-                    marge_ytd: Math.round(data.stats.marge),
-                    taux_marge_pct: tauxMarge,
-                    pipeline_total: Math.round(data.stats.pipe),
-                    pipeline_semaine: Math.round(data.wow.pipe),
-                    dossiers_gagnes: data.stats.win,
-                    taux_conversion_pct: Math.round((data.stats.win/data.stats.total)*100) || 0,
-                    panier_moyen: Math.round(data.stats.ca/data.stats.win) || 0,
-                    volume_total_m3: Math.round(data.stats.vol),
-                    pertes_ytd: Math.round(data.stats.pertes),
-                    // Segments
-                    seg_particulier_ca: Math.round(data.segs.Particulier.ca),
-                    seg_particulier_pipe: Math.round(data.segs.Particulier.pipe),
-                    seg_particulier_gagnes: data.segs.Particulier.win,
-                    seg_pro_ca: Math.round(data.segs.Professionnel.ca),
-                    seg_pro_pipe: Math.round(data.segs.Professionnel.pipe),
-                    seg_pro_gagnes: data.segs.Professionnel.win,
-                    seg_manut_ca: Math.round(data.segs.Manutention_Lourde.ca),
-                    seg_manut_pipe: Math.round(data.segs.Manutention_Lourde.pipe),
-                    seg_manut_gagnes: data.segs.Manutention_Lourde.win,
-                    // Équipe
-                    top_commercial_ca: topComm ? topComm[0] : 'N/A',
-                    top_commercial_ca_val: topComm ? Math.round(topComm[1].ca) : 0,
-                    top_commercial_pipe: topPipe ? topPipe[0] : 'N/A',
-                    // Clients
-                    ca_nouveaux_clients: Math.round(data.nouveaux.ca),
-                    n_nouveaux_clients: data.nouveaux.n,
-                    ca_clients_existants: Math.round(data.existants.ca),
-                    n_clients_existants: data.existants.n,
-                    // Forecast
-                    monthlyForecast: data.fore26.map(v => Math.round(v/1000)),
-                    // Legacy (pour compatibilité)
-                    ca: Math.round(data.stats.ca), caWow: Math.round(data.wow.ca),
-                    pipe: Math.round(data.stats.pipe), winRate: Math.round((data.stats.win/data.stats.total)*100)||0,
-                    avgVal: Math.round(data.stats.ca/data.stats.win)||0, count: data.stats.win
+                // ── ÉTAPE 2 : DÉDUPLIQUER par ID_Dossier (garde le premier) ──
+                const seen = new Set();
+                const uniqRows = rawRows.filter(r => {
+                    if (seen.has(r.id)) return false;
+                    seen.add(r.id);
+                    return true;
+                });
+                console.log('Dashboard: ' + rawRows.length + ' lignes brutes -> ' + uniqRows.length + ' uniques apres dedup');
+
+                // ── ÉTAPE 3 : Agréger les données ──
+                let data = { 
+                    rev25: Array(12).fill(0), rev26: Array(12).fill(0), fore26: Array(12).fill(0),
+                    dests: {}, comms: {},
+                    states: { 'Clos':0, 'Devis Envoyés':0, 'En Négociation':0, 'Annulés':0 },
+                    stats: { ca:0, pipe:0, vol:0, win:0, total:0, marge:0, pertes:0 },
+                    wow: { ca:0, pipe:0 },
+                    segs: {
+                        'Particulier':      { ca:0, pipe:0, marge:0, win:0, total:0 },
+                        'Professionnel':    { ca:0, pipe:0, marge:0, win:0, total:0 },
+                        'Manutention_Lourde':{ ca:0, pipe:0, marge:0, win:0, total:0 }
+                    },
+                    nouveaux: { ca:0, n:0 }, existants: { ca:0, n:0 }
                 };
-                updateUI(data, summary);
+
+                const CURRENT_YEAR = now.getFullYear();
+
+                uniqRows.forEach(r => {
+                    const { statut, segment, montant, marge, volume, commercial, destination, typeClient } = r;
+                    const dSig    = new Date(r.dateSignature);
+                    const dCreate = new Date(r.dateCreation);
+                    const yr      = !isNaN(dCreate.getTime()) ? dCreate.getFullYear() : 0;
+                    const isYTD   = (yr === CURRENT_YEAR);
+                    const segKey  = segment.replace(/ /g,'_');
+                    const isGagne = statut.includes('gagné') || statut.includes('gagne') || statut.includes('clos');
+                    const isAnnul = statut.includes('annulé') || statut.includes('annule') || statut.includes('perdu');
+
+                    if (!data.comms[commercial]) data.comms[commercial] = { ca:0, pipe:0, win:0, total:0, marge:0 };
+                    data.stats.total++;
+                    data.comms[commercial].total++;
+                    if (data.segs[segKey]) data.segs[segKey].total++;
+
+                    if (isGagne) {
+                        // Charts toutes années
+                        if (yr === 2025 && !isNaN(dSig.getTime())) data.rev25[dSig.getMonth()] += montant;
+                        if (yr === 2026 && !isNaN(dSig.getTime())) data.rev26[dSig.getMonth()] += montant;
+                        data.states['Clos'] += montant;
+                        // KPIs commerciaux (toutes années pour classement)
+                        data.comms[commercial].ca   += montant;
+                        data.comms[commercial].win  += 1;
+                        data.comms[commercial].marge+= marge;
+                        if (data.segs[segKey]) { data.segs[segKey].ca += montant; data.segs[segKey].marge += marge; data.segs[segKey].win++; }
+                        data.dests[destination] = (data.dests[destination]||0) + volume;
+                        // Stats YTD uniquement
+                        if (isYTD) {
+                            data.stats.ca   += montant;
+                            data.stats.win  += 1;
+                            data.stats.vol  += volume;
+                            data.stats.marge+= marge;
+                            if (typeClient.toLowerCase().includes('nouveau')) { data.nouveaux.ca += montant; data.nouveaux.n++; }
+                            else { data.existants.ca += montant; data.existants.n++; }
+                            if (!isNaN(dSig.getTime()) && dSig >= sDays) data.wow.ca += montant;
+                        }
+                    } else if (isAnnul) {
+                        data.states['Annulés'] += montant;
+                        data.stats.pertes += montant;
+                    } else {
+                        // Pipeline
+                        data.stats.pipe += montant;
+                        data.comms[commercial].pipe += montant;
+                        if (data.segs[segKey]) data.segs[segKey].pipe += montant;
+                        if (statut.includes('devis')) data.states['Devis Envoyés'] += montant;
+                        else data.states['En Négociation'] += montant;
+                        if (isYTD) {
+                            const fDate = !isNaN(dCreate.getTime()) ? dCreate : now;
+                            if (fDate.getFullYear() === CURRENT_YEAR) data.fore26[fDate.getMonth()] += montant;
+                            if (!isNaN(dCreate.getTime()) && dCreate >= sDays) data.wow.pipe += montant;
+                        }
+                    }
+                });
+
+                                updateUI(data, summary);
                 
                 const analysis = await fetchAnalysisFromN8N(summary);
                 if (analysis) {
