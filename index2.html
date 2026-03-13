@@ -522,6 +522,30 @@
                         '</div>';
                     updateUI({ comms:{}, segs:{ Particulier:{ca:0,pipe:0,marge:0,win:0,total:0}, Professionnel:{ca:0,pipe:0,marge:0,win:0,total:0}, Manutention_Lourde:{ca:0,pipe:0,marge:0,win:0,total:0} }, dests:{}, states:{ Clos:0,"Devis Envoyés":0,"En Négociation":0,Annulés:0 }, stats:{ca:0,pipe:0,vol:0,win:0,total:0,marge:0,pertes:0}, wow:{ca:0,pipe:0}, nouveaux:{ca:0,n:0}, existants:{ca:0,n:0}, rev25:Array(12).fill(0), rev26:Array(12).fill(0), fore26:Array(12).fill(0) }, buildSummary({stats:{ca:0,pipe:0,vol:0,win:0,total:0,marge:0,pertes:0},wow:{ca:0,pipe:0},segs:{Particulier:{ca:0,pipe:0,marge:0,win:0},Professionnel:{ca:0,pipe:0,marge:0,win:0},Manutention_Lourde:{ca:0,pipe:0,marge:0,win:0}},comms:{},nouveaux:{ca:0,n:0},existants:{ca:0,n:0},fore26:Array(12).fill(0)}));
                     document.getElementById('last-update').innerText = 'Sheet vide — en attente de données';
+                    // Appeler l'IA avec les données de référence pour démo
+                    const demoRows = EMBEDDED_DATA;
+                    const { data: demoData } = processRows(demoRows);
+                    const demoSummary = buildSummary(demoData);
+                    updateUI(demoData, demoSummary);
+                    document.getElementById('bilan-content').innerHTML =
+                        '<div class="mb-3 p-2 bg-blue-900/30 border border-blue-500/40 rounded-lg">' +
+                        '<p class="text-blue-300 text-[10px] font-bold">📊 Mode démo — données de référence (294 dossiers)</p>' +
+                        '<p class="text-slate-500 text-[9px]">Sync le sheet pour afficher vos données live</p></div>';
+                    document.getElementById('ai-status').innerText = 'APPEL IA (DÉMO)...';
+                    const demoAnalysis = await fetchAnalysisFromN8N(demoSummary);
+                    if (demoAnalysis) {
+                        aiReports = { hebdo: demoAnalysis.hebdo || 'N/A', annuel: demoAnalysis.annuel || 'N/A' };
+                        document.getElementById('strat-devcom').innerText = demoAnalysis.devCom || 'N/A';
+                        document.getElementById('strat-leads').innerText  = demoAnalysis.leads  || 'N/A';
+                        document.getElementById('strat-vis').innerText    = demoAnalysis.visibilite || 'N/A';
+                        const setEl2 = (id,val) => { const e=document.getElementById(id); if(e&&val) e.innerText=val; };
+                        setEl2('strat-closing1', demoAnalysis.closingPrioritaire_1);
+                        setEl2('strat-risques',  demoAnalysis.risquesIdentifies);
+                        setEl2('strat-projection', demoAnalysis.projectionCA);
+                        setEl2('strat-kpis',     demoAnalysis.kpisCibles);
+                        setEl2('ai-top-comm',    demoAnalysis.topCommercialAnalyse);
+                        switchBilan(activeBilan);
+                    }
                     return;
                 }
 
