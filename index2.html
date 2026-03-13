@@ -354,7 +354,54 @@
                     }
                 });
 
-                                updateUI(data, summary);
+                // ── Construire le summary pour updateUI et webhook ──
+                const tauxM = data.stats.ca > 0 ? Math.round(data.stats.marge / data.stats.ca * 100) : 0;
+                const topC  = Object.entries(data.comms).sort((a,b) => b[1].ca   - a[1].ca)[0];
+                const topP  = Object.entries(data.comms).sort((a,b) => b[1].pipe - a[1].pipe)[0];
+                const summary = {
+                    // KPIs YTD
+                    ca_ytd:               Math.round(data.stats.ca),
+                    ca_semaine:           Math.round(data.wow.ca),
+                    marge_ytd:            Math.round(data.stats.marge),
+                    taux_marge_pct:       tauxM,
+                    pipeline_total:       Math.round(data.stats.pipe),
+                    pipeline_semaine:     Math.round(data.wow.pipe),
+                    dossiers_gagnes:      data.stats.win,
+                    taux_conversion_pct:  data.stats.total > 0 ? Math.round(data.stats.win / data.stats.total * 100) : 0,
+                    panier_moyen:         data.stats.win > 0 ? Math.round(data.stats.ca / data.stats.win) : 0,
+                    volume_total_m3:      Math.round(data.stats.vol),
+                    pertes_ytd:           Math.round(data.stats.pertes),
+                    // Segments
+                    seg_particulier_ca:   Math.round(data.segs['Particulier'].ca),
+                    seg_particulier_pipe: Math.round(data.segs['Particulier'].pipe),
+                    seg_particulier_gagnes: data.segs['Particulier'].win,
+                    seg_pro_ca:           Math.round(data.segs['Professionnel'].ca),
+                    seg_pro_pipe:         Math.round(data.segs['Professionnel'].pipe),
+                    seg_pro_gagnes:       data.segs['Professionnel'].win,
+                    seg_manut_ca:         Math.round(data.segs['Manutention_Lourde'].ca),
+                    seg_manut_pipe:       Math.round(data.segs['Manutention_Lourde'].pipe),
+                    seg_manut_gagnes:     data.segs['Manutention_Lourde'].win,
+                    // Équipe
+                    top_commercial_ca:     topC ? topC[0] : 'N/A',
+                    top_commercial_ca_val: topC ? Math.round(topC[1].ca) : 0,
+                    top_commercial_pipe:   topP ? topP[0] : 'N/A',
+                    // Clients
+                    ca_nouveaux_clients:   Math.round(data.nouveaux.ca),
+                    n_nouveaux_clients:    data.nouveaux.n,
+                    ca_clients_existants:  Math.round(data.existants.ca),
+                    n_clients_existants:   data.existants.n,
+                    // Forecast mensuel
+                    monthlyForecast: data.fore26.map(v => Math.round(v / 1000)),
+                    // Champs legacy pour compatibilité
+                    ca: Math.round(data.stats.ca),
+                    caWow: Math.round(data.wow.ca),
+                    pipe: Math.round(data.stats.pipe),
+                    winRate: data.stats.total > 0 ? Math.round(data.stats.win / data.stats.total * 100) : 0,
+                    avgVal: data.stats.win > 0 ? Math.round(data.stats.ca / data.stats.win) : 0,
+                    count: data.stats.win
+                };
+
+                updateUI(data, summary);
                 
                 const analysis = await fetchAnalysisFromN8N(summary);
                 if (analysis) {
