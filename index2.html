@@ -222,7 +222,19 @@
                 const res = await fetch(BASE_URL);
                 const csv = await res.text();
                 const lines = csv.split('\n').filter(l => l.trim() !== "");
-                let data = { rev25: Array(12).fill(0), rev26: Array(12).fill(0), fore26: Array(12).fill(0), dests: {}, comms: {}, states: { "Clos":0, "Devis Envoyés":0, "En Négociation":0, "Annulés":0 }, stats: { ca: 0, pipe: 0, vol: 0, win: 0, total: 0 }, wow: { ca: 0, pipe: 0 } };
+                let data = { 
+                    rev25: Array(12).fill(0), rev26: Array(12).fill(0), fore26: Array(12).fill(0), 
+                    dests: {}, comms: {}, 
+                    states: { "Clos":0, "Devis Envoyés":0, "En Négociation":0, "Annulés":0 }, 
+                    stats: { ca: 0, pipe: 0, vol: 0, win: 0, total: 0, marge: 0, pertes: 0 }, 
+                    wow: { ca: 0, pipe: 0 },
+                    segs: { 
+                        Particulier: { ca: 0, pipe: 0, marge: 0, win: 0, total: 0 },
+                        Professionnel: { ca: 0, pipe: 0, marge: 0, win: 0, total: 0 },
+                        Manutention_Lourde: { ca: 0, pipe: 0, marge: 0, win: 0, total: 0 }
+                    },
+                    nouveaux: { ca: 0, n: 0 }, existants: { ca: 0, n: 0 }
+                };
                 const now = new Date();
                 const sDays = new Date(now.getTime() - 7*24*60*60*1000);
 
@@ -259,36 +271,86 @@
                     const dest   = (col(c, 'Destination_Pays', 8) || 'AUTRE').toUpperCase();
                     const dSig   = new Date(col(c, 'Date_Signature', 2));
 
+                    const seg   = col(c, 'Segment', 5) || 'Particulier';
+                    const marge = colNum(c, 'Marge_HT', 8);
+                    const typeC = col(c, 'Type_Client', 6);
+                    const segKey = seg.replace(' ','_');
+
                     if (statut.includes('gagné') || statut.includes('clos')) {
-                        data.stats.ca += val; data.stats.win++; data.stats.vol += vol;
+                        data.stats.ca += val; data.stats.win++; data.stats.vol += vol; data.stats.marge += marge;
                         data.states["Clos"] += val;
-                        if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, win: 0, total: 0 };
-                        data.comms[name].ca += val; data.comms[name].win++;
+                        if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, win: 0, total: 0, marge: 0 };
+                        data.comms[name].ca += val; data.comms[name].win++; data.comms[name].marge += marge;
                         data.dests[dest] = (data.dests[dest]||0) + vol;
+                        if (data.segs[segKey]) { data.segs[segKey].ca += val; data.segs[segKey].marge += marge; data.segs[segKey].win++; }
+                        if (typeC.toLowerCase().includes('nouveau')) { data.nouveaux.ca += val; data.nouveaux.n++; }
+                        else { data.existants.ca += val; data.existants.n++; }
                         if (!isNaN(dSig.getTime())) {
                             if (dSig.getFullYear() === 2025) data.rev25[dSig.getMonth()] += val;
                             if (dSig.getFullYear() === 2026) data.rev26[dSig.getMonth()] += val;
                         }
                         if (dSig >= sDays) data.wow.ca += val;
                     } else if (statut.includes('annulé') || statut.includes('perdu')) {
-                        data.states["Annulés"] += val;
+                        data.states["Annulés"] += val; data.stats.pertes += val;
                     } else {
                         data.stats.pipe += val;
                         if (statut.includes('devis')) data.states["Devis Envoyés"] += val;
                         else data.states["En Négociation"] += val;
-                        if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, win: 0, total: 0 };
+                        if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, win: 0, total: 0, marge: 0 };
                         data.comms[name].pipe += val;
+                        if (data.segs[segKey]) data.segs[segKey].pipe += val;
                         let fDate = isNaN(dSig.getTime()) ? now : dSig;
                         if (fDate.getFullYear() === 2026) data.fore26[fDate.getMonth()] += val;
-                        // Pipeline "cette semaine" = dossiers créés/modifiés dans les 7 derniers jours
                         const dCreate = new Date(col(c, 'Date_Creation', 1));
                         if (!isNaN(dCreate.getTime()) && dCreate >= sDays) data.wow.pipe += val;
                     }
+                    if (data.segs[segKey]) data.segs[segKey].total++;
                     if (data.comms[name]) data.comms[name].total++;
                     data.stats.total++;
                 });
 
-                const summary = { ca: data.stats.ca, caWow: data.wow.ca, pipe: data.stats.pipe, pipeWow: data.wow.pipe, winRate: Math.round((data.stats.win/data.stats.total)*100), avgVal: Math.round(data.stats.ca/data.stats.win) || 0, vol: data.stats.vol, count: data.stats.win, monthlyForecast: data.fore26.map(v => Math.round(v/1000)) };
+                const tauxMarge = data.stats.ca > 0 ? Math.round(data.stats.marge/data.stats.ca*100) : 0;
+                const topComm = Object.entries(data.comms).sort((a,b)=>b[1].ca-a[1].ca)[0];
+                const topPipe = Object.entries(data.comms).sort((a,b)=>b[1].pipe-a[1].pipe)[0];
+                const summary = { 
+                    // KPIs globaux
+                    ca_ytd: Math.round(data.stats.ca),
+                    ca_semaine: Math.round(data.wow.ca),
+                    marge_ytd: Math.round(data.stats.marge),
+                    taux_marge_pct: tauxMarge,
+                    pipeline_total: Math.round(data.stats.pipe),
+                    pipeline_semaine: Math.round(data.wow.pipe),
+                    dossiers_gagnes: data.stats.win,
+                    taux_conversion_pct: Math.round((data.stats.win/data.stats.total)*100) || 0,
+                    panier_moyen: Math.round(data.stats.ca/data.stats.win) || 0,
+                    volume_total_m3: Math.round(data.stats.vol),
+                    pertes_ytd: Math.round(data.stats.pertes),
+                    // Segments
+                    seg_particulier_ca: Math.round(data.segs.Particulier.ca),
+                    seg_particulier_pipe: Math.round(data.segs.Particulier.pipe),
+                    seg_particulier_gagnes: data.segs.Particulier.win,
+                    seg_pro_ca: Math.round(data.segs.Professionnel.ca),
+                    seg_pro_pipe: Math.round(data.segs.Professionnel.pipe),
+                    seg_pro_gagnes: data.segs.Professionnel.win,
+                    seg_manut_ca: Math.round(data.segs.Manutention_Lourde.ca),
+                    seg_manut_pipe: Math.round(data.segs.Manutention_Lourde.pipe),
+                    seg_manut_gagnes: data.segs.Manutention_Lourde.win,
+                    // Équipe
+                    top_commercial_ca: topComm ? topComm[0] : 'N/A',
+                    top_commercial_ca_val: topComm ? Math.round(topComm[1].ca) : 0,
+                    top_commercial_pipe: topPipe ? topPipe[0] : 'N/A',
+                    // Clients
+                    ca_nouveaux_clients: Math.round(data.nouveaux.ca),
+                    n_nouveaux_clients: data.nouveaux.n,
+                    ca_clients_existants: Math.round(data.existants.ca),
+                    n_clients_existants: data.existants.n,
+                    // Forecast
+                    monthlyForecast: data.fore26.map(v => Math.round(v/1000)),
+                    // Legacy (pour compatibilité)
+                    ca: Math.round(data.stats.ca), caWow: Math.round(data.wow.ca),
+                    pipe: Math.round(data.stats.pipe), winRate: Math.round((data.stats.win/data.stats.total)*100)||0,
+                    avgVal: Math.round(data.stats.ca/data.stats.win)||0, count: data.stats.win
+                };
                 updateUI(data, summary);
                 
                 const analysis = await fetchAnalysisFromN8N(summary);
@@ -297,6 +359,14 @@
                     document.getElementById('strat-devcom').innerText = analysis.devCom || "N/A";
                     document.getElementById('strat-leads').innerText = analysis.leads || "N/A";
                     document.getElementById('strat-vis').innerText = analysis.visibilite || "N/A";
+                    // Sections IA supplémentaires si présentes dans le DOM
+                    const setEl = (id, val) => { const el = document.getElementById(id); if(el && val) el.innerText = val; };
+                    setEl('strat-closing1', analysis.closingPrioritaire_1);
+                    setEl('strat-closing2', analysis.closingPrioritaire_2);
+                    setEl('strat-risques', analysis.risquesIdentifies);
+                    setEl('strat-projection', analysis.projectionCA);
+                    setEl('strat-kpis', analysis.kpisCibles);
+                    setEl('ai-top-comm', analysis.topCommercialAnalyse);
                     switchBilan(activeBilan);
                 }
                 document.getElementById('last-update').innerText = `MAJ : ${new Date().toLocaleTimeString().toUpperCase()}`;
