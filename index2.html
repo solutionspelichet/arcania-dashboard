@@ -279,17 +279,25 @@
             document.getElementById('btn-hebdo').className = type === 'hebdo' ? 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all bg-blue-600 text-white shadow-lg' : 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-white';
             document.getElementById('btn-annuel').className = type === 'annuel' ? 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all bg-blue-600 text-white shadow-lg' : 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-white';
             const txt = aiReports[type] || '';
-            // Formater le texte : mettre en valeur les CHF et les %
-            const formatted = txt
-                .replace(/([0-9][0-9 ']*\s*CHF)/g, '<span class="text-cyan-300 font-bold font-mono">$1</span>')
-                .replace(/(\d+[\.,]?\d*\s*%)/g,    '<span class="text-emerald-400 font-bold">$1</span>')
-                .replace(/Signal\s*:/g,  '<br><span class="text-amber-400 font-semibold">📊 Signal :</span>')
-                .replace(/Action\s*:/g,  '<br><span class="text-blue-400 font-semibold">⚡ Action :</span>')
-                .replace(/YTD\s*/g,      '<span class="text-purple-300 font-semibold">YTD </span>')
-                .replace(/Pipe\s+/g,     '<span class="text-slate-300">Pipe </span>')
-                .replace(/Marge\s+/g,    '<span class="text-slate-300">Marge </span>');
-            document.getElementById('bilan-content').innerHTML = 
-                '<p class="text-[12px] text-slate-300 leading-relaxed">' + formatted + '</p>';
+            function fmtAI(t) {
+                return t
+                    .replace(/([0-9][0-9\s']*(?:CHF|%|m³|dossiers?))/g,
+                        '<span class="text-cyan-300 font-bold font-mono whitespace-nowrap">$1</span>')
+                    .replace(/Action\s*(?:immédiate)?\s*:/gi,
+                        '<br><span class="inline-flex items-center gap-1 text-blue-400 font-bold text-[10px] uppercase tracking-wide mt-2">⚡ Action</span><span class="text-blue-300"> : </span>')
+                    .replace(/Risque\s*#?\d*\s*[—-]/gi,
+                        '<span class="text-red-400 font-bold">⚠ Risque — </span>')
+                    .replace(/Priorité\s*/gi, '<span class="text-amber-400 font-semibold">Priorité </span>')
+                    .replace(/benchmark/gi,  '<span class="text-slate-400 italic">benchmark</span>')
+                    .replace(/\n/g, '<br>');
+            }
+            // Construire le contenu avec bannière corruption si applicable
+            let existing = document.getElementById('bilan-content').innerHTML;
+            const banner = existing.includes('corrompu') ? existing.match(/<div class="mb-3[^"]*"[^>]*>[\s\S]*?<\/div><\/div>/)?.[0] || '' : '';
+            document.getElementById('bilan-content').innerHTML = banner +
+                '<div class="space-y-1">' +
+                '<p class="text-[11px] text-slate-300 leading-relaxed">' + fmtAI(txt) + '</p>' +
+                '</div>';
         }
 
         // ═══════════════════════════════════════════════════════
@@ -483,10 +491,20 @@
                             });
                         });
 
-                        console.log('Sheet chargé: ' + rows.length + ' dossiers uniques (sur ' + (csvLines.length-1) + ' lignes brutes)');
+                        const caTotal = rows.filter(r=>(r.s||'').toLowerCase().includes('gagn')).reduce((s,r)=>s+r.m,0);
+                        const nbDoss  = rows.length;
+                        console.log('Sheet: ' + nbDoss + ' dossiers uniques, CA total=' + Math.round(caTotal));
 
-                        if (rows.length === 0) sheetStatus = 'empty';
-                        else if (rows.length > 500) sheetStatus = 'corrupted'; // trop de doublons
+                        if (rows.length === 0) {
+                            sheetStatus = 'empty';
+                        } else if (nbDoss > 500 || caTotal > 3000000) {
+                            // Sheet corrompu : trop de lignes ou CA impossible
+                            sheetStatus = 'corrupted';
+                            rows = EMBEDDED_DATA; // fallback sur données propres
+                            console.log('Sheet corrompu → données de référence utilisées (' + EMBEDDED_DATA.length + ' dossiers)');
+                        } else {
+                            console.log('Sheet valide — ' + nbDoss + ' dossiers, CA ' + Math.round(caTotal) + ' CHF');
+                        }
                     }
                 } catch(sheetErr) {
                     console.error('Erreur lecture sheet:', sheetErr);
@@ -508,15 +526,12 @@
                 }
 
                 if (sheetStatus === 'corrupted') {
-                    document.getElementById('bilan-content').innerHTML =
-                        '<div class="p-3 bg-red-900/20 border border-red-500/30 rounded-lg">' +
-                        '<p class="text-red-400 text-xs font-bold mb-1">⚠️ Google Sheet corrompu (' + rows.length + ' doublons détectés)</p>' +
-                        '<p class="text-slate-400 text-[10px]">1. Ouvrez le Google Sheet<br>' +
-                        '2. Sélectionnez toutes les lignes sauf la ligne 1<br>' +
-                        '3. Supprimez-les<br>' +
-                        '4. Déposez votre Excel dans le dossier Drive pour relancer la sync</p>' +
-                        '</div>';
-                    // Continuer quand même avec les données dédupliquées
+                    // Afficher un bandeau en haut du bilan
+                    const banner = '<div class="mb-3 p-2 bg-amber-900/30 border border-amber-500/40 rounded-lg flex items-start gap-2">' +
+                        '<span class="text-amber-400 text-lg">⚠️</span>' +
+                        '<div><p class="text-amber-300 text-[10px] font-bold">Sheet corrompu — données de référence affichées</p>' +
+                        '<p class="text-slate-500 text-[9px] mt-0.5">Pour actualiser : videz le sheet (lignes 2+) puis relancez le sync n8n</p></div></div>';
+                    document.getElementById('bilan-content').innerHTML = banner;
                 }
 
                 if (sheetStatus === 'error') {
