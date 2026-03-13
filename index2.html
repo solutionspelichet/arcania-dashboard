@@ -236,6 +236,7 @@
                     nouveaux: { ca: 0, n: 0 }, existants: { ca: 0, n: 0 }
                 };
                 const now = new Date();
+                const CURRENT_YEAR = now.getFullYear();
                 const sDays = new Date(now.getTime() - 7*24*60*60*1000);
 
                 // ── Parser CSV robuste basé sur les noms de colonnes ──
@@ -276,20 +277,27 @@
                     const typeC = col(c, 'Type_Client', 6);
                     const segKey = seg.replace(' ','_');
 
+                    // Année du dossier (basé sur Date_Creation)
+                    const dCreate2 = new Date(col(c, 'Date_Creation', 1));
+                    const dossierYear = !isNaN(dCreate2.getTime()) ? dCreate2.getFullYear() : 0;
+                    const isYTD = (dossierYear === CURRENT_YEAR);
+
                     if (statut.includes('gagné') || statut.includes('clos')) {
-                        data.stats.ca += val; data.stats.win++; data.stats.vol += vol; data.stats.marge += marge;
                         data.states["Clos"] += val;
-                        if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, win: 0, total: 0, marge: 0 };
-                        data.comms[name].ca += val; data.comms[name].win++; data.comms[name].marge += marge;
-                        data.dests[dest] = (data.dests[dest]||0) + vol;
-                        if (data.segs[segKey]) { data.segs[segKey].ca += val; data.segs[segKey].marge += marge; data.segs[segKey].win++; }
-                        if (typeC.toLowerCase().includes('nouveau')) { data.nouveaux.ca += val; data.nouveaux.n++; }
-                        else { data.existants.ca += val; data.existants.n++; }
-                        if (!isNaN(dSig.getTime())) {
-                            if (dSig.getFullYear() === 2025) data.rev25[dSig.getMonth()] += val;
-                            if (dSig.getFullYear() === 2026) data.rev26[dSig.getMonth()] += val;
+                        // Charts historiques (toutes années)
+                        if (dossierYear === 2025) data.rev25[(!isNaN(dSig.getTime()) ? dSig.getMonth() : 0)] += val;
+                        if (dossierYear === 2026) data.rev26[(!isNaN(dSig.getTime()) ? dSig.getMonth() : 0)] += val;
+                        // KPIs YTD uniquement (année en cours)
+                        if (isYTD) {
+                            data.stats.ca += val; data.stats.win++; data.stats.vol += vol; data.stats.marge += marge;
+                            if (!data.comms[name]) data.comms[name] = { ca: 0, pipe: 0, win: 0, total: 0, marge: 0 };
+                            data.comms[name].ca += val; data.comms[name].win++; data.comms[name].marge += marge;
+                            data.dests[dest] = (data.dests[dest]||0) + vol;
+                            if (data.segs[segKey]) { data.segs[segKey].ca += val; data.segs[segKey].marge += marge; data.segs[segKey].win++; }
+                            if (typeC.toLowerCase().includes('nouveau')) { data.nouveaux.ca += val; data.nouveaux.n++; }
+                            else { data.existants.ca += val; data.existants.n++; }
+                            if (dSig >= sDays) data.wow.ca += val;
                         }
-                        if (dSig >= sDays) data.wow.ca += val;
                     } else if (statut.includes('annulé') || statut.includes('perdu')) {
                         data.states["Annulés"] += val; data.stats.pertes += val;
                     } else {
@@ -374,15 +382,59 @@
         }
 
         function updateUI(data, s) {
-            document.getElementById('kpi-ca').innerText = s.ca.toLocaleString() + ' CHF';
-            document.getElementById('kpi-ca-comp').innerText = `+${s.caWow.toLocaleString()} € vs S-1`;
-            document.getElementById('kpi-pipe').innerText = s.pipe.toLocaleString('fr-CH') + ' CHF';
-            document.getElementById('kpi-pipe-comp').innerText = `${s.pipeWow >= 0 ? '+' : ''}${s.pipeWow.toLocaleString()} € vs S-1`;
-            document.getElementById('kpi-avg').innerText = s.avgVal.toLocaleString() + ' CHF';
-            document.getElementById('kpi-conv').innerText = s.winRate + ' %';
-            document.getElementById('kpi-vol').innerText = s.vol.toLocaleString();
-            document.getElementById('kpi-count').innerText = s.count;
-            document.getElementById('team-table').innerHTML = Object.entries(data.comms).sort((a,b)=>b[1].ca-a[1].ca).map(([n, st]) => `<tr class="border-b border-slate-800/50 hover:bg-slate-800/20"><td class="py-2 font-bold">${n}</td><td class="py-2 text-right text-cyan-400 font-mono">${st.ca.toLocaleString()} €</td><td class="py-2 text-right text-slate-400 font-mono">${st.pipe.toLocaleString()} €</td><td class="py-2 text-right font-bold text-emerald-500">${Math.round((st.win/st.total)*100)} %</td></tr>`).join('');
+            // Helper sécurisé
+            const fmt  = (v) => Math.round(v||0).toLocaleString('fr-CH');
+            const fmtC = (v) => fmt(v) + ' CHF';
+            const pct  = (v) => Math.round(v||0) + ' %';
+            const setT = (id, val) => { const e = document.getElementById(id); if(e) e.innerText = val; };
+            const setH = (id, val) => { const e = document.getElementById(id); if(e) e.innerHTML = val; };
+
+            // KPIs principaux
+            setT('kpi-ca',       fmtC(s.ca_ytd || s.ca));
+            setT('kpi-ca-comp',  `+${fmt(s.ca_semaine || s.caWow)} CHF vs S-1`);
+            setT('kpi-pipe',     fmtC(s.pipeline_total || s.pipe));
+            setT('kpi-pipe-comp',`+${fmt(s.pipeline_semaine || s.pipeWow)} CHF vs S-1`);
+            setT('kpi-avg',      fmtC(s.panier_moyen || s.avgVal));
+            setT('kpi-conv',     pct(s.taux_conversion_pct || s.winRate));
+            setT('kpi-vol',      fmt(s.volume_total_m3 || s.vol));
+            setT('kpi-count',    Math.round(s.dossiers_gagnes || s.count || 0));
+
+            // KPI marge (si l'élément existe)
+            if (s.taux_marge_pct) {
+                setT('kpi-marge',    fmtC(s.marge_ytd));
+                setT('kpi-taux-marge', pct(s.taux_marge_pct));
+            }
+
+            // Tableau équipe
+            const commRows = Object.entries(data.comms)
+                .sort((a,b) => b[1].ca - a[1].ca)
+                .filter(([n]) => n && n !== 'Inconnu' && n.trim() !== '')
+                .map(([n, st]) => {
+                    const winPct = st.total > 0 ? Math.round((st.win / st.total) * 100) : 0;
+                    return `<tr class="border-b border-slate-800/50 hover:bg-slate-800/20">
+                        <td class="py-2 font-bold">${n}</td>
+                        <td class="py-2 text-right text-cyan-400 font-mono">${fmt(st.ca)} CHF</td>
+                        <td class="py-2 text-right text-slate-400 font-mono">${fmt(st.pipe)} CHF</td>
+                        <td class="py-2 text-right font-bold ${winPct>=45?'text-emerald-500':'text-amber-400'}">${winPct} %</td>
+                    </tr>`;
+                }).join('');
+            setH('team-table', commRows || '<tr><td colspan="4" class="py-4 text-center text-slate-500">Aucune donnée</td></tr>');
+
+            // Segmentation (si éléments présents)
+            if (s.seg_particulier_ca !== undefined) {
+                const segsHTML = [
+                    { label:'🏠 Particulier', ca: s.seg_particulier_ca, pipe: s.seg_particulier_pipe, win: s.seg_particulier_gagnes },
+                    { label:'💼 Professionnel', ca: s.seg_pro_ca, pipe: s.seg_pro_pipe, win: s.seg_pro_gagnes },
+                    { label:'⚙️ Manutention', ca: s.seg_manut_ca, pipe: s.seg_manut_pipe, win: s.seg_manut_gagnes },
+                ].map(seg => `<tr class="border-b border-slate-800/40">
+                    <td class="py-2 font-bold text-slate-300">${seg.label}</td>
+                    <td class="py-2 text-right text-cyan-400 font-mono">${fmt(seg.ca)} CHF</td>
+                    <td class="py-2 text-right text-slate-400 font-mono">${fmt(seg.pipe)} CHF</td>
+                    <td class="py-2 text-right text-emerald-400 font-mono">${seg.win||0}</td>
+                </tr>`).join('');
+                setH('seg-table', segsHTML);
+            }
+
             renderCharts(data);
         }
 
