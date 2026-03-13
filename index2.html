@@ -25,7 +25,11 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0b1121; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
-    </style>
+            .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #475569; }
+</style>
 </head>
 <body class="min-h-screen p-4 md:p-6 lg:p-8">
 
@@ -55,19 +59,35 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         <div class="lg:col-span-2 glass-panel rounded-2xl overflow-hidden glow-cyan">
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-800/20">
-                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Précision & Forecast IA</h3>
+                <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Analyse Stratégique IA</h3>
                 <div class="flex space-x-1 bg-slate-900 p-1 rounded-lg border border-slate-700">
                     <button id="btn-hebdo" onclick="switchBilan('hebdo')" class="px-4 py-1.5 text-[10px] font-bold rounded-md transition-all bg-blue-600 text-white shadow-lg">HEBDOMADAIRE</button>
                     <button id="btn-annuel" onclick="switchBilan('annuel')" class="px-4 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-white">ANNUEL (YTD)</button>
                 </div>
             </div>
-            <div class="p-6 h-[200px] overflow-y-auto">
-                <div id="bilan-content" class="text-slate-300 text-sm leading-relaxed space-y-4 pr-2">
+            <div class="p-5 h-[240px] overflow-y-auto custom-scroll">
+                <div id="bilan-content" class="space-y-3 pr-1">
+                    <!-- Chargement initial -->
                     <div id="ai-loading-placeholder" class="space-y-3">
-                        <div class="h-4 w-3/4 loading-shimmer rounded opacity-50"></div>
-                        <div class="h-4 w-full loading-shimmer rounded opacity-30"></div>
-                        <p class="text-[11px] text-slate-500 italic">Connexion au serveur n8n en cours...</p>
+                        <div class="h-3 w-3/4 loading-shimmer rounded opacity-50"></div>
+                        <div class="h-3 w-full loading-shimmer rounded opacity-30"></div>
+                        <p class="text-[11px] text-slate-500 italic mt-2">Connexion au serveur n8n...</p>
                     </div>
+                </div>
+            </div>
+            <!-- Sections IA supplémentaires -->
+            <div class="border-t border-slate-800 px-5 py-4 grid grid-cols-3 gap-4">
+                <div>
+                    <p class="text-[9px] font-bold text-amber-400 uppercase tracking-widest mb-1">⚠ Risques</p>
+                    <p id="strat-risques" class="text-[10px] text-slate-400 leading-snug">—</p>
+                </div>
+                <div>
+                    <p class="text-[9px] font-bold text-cyan-400 uppercase tracking-widest mb-1">📈 Projection CA</p>
+                    <p id="strat-projection" class="text-[10px] text-slate-300 font-mono leading-snug">—</p>
+                </div>
+                <div>
+                    <p class="text-[9px] font-bold text-purple-400 uppercase tracking-widest mb-1">🎯 KPIs S+1</p>
+                    <p id="strat-kpis" class="text-[10px] text-slate-400 leading-snug">—</p>
                 </div>
             </div>
         </div>
@@ -76,18 +96,35 @@
             <div class="px-6 py-4 border-b border-slate-800 bg-slate-800/20">
                 <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400">Plan d'Action IA</h3>
             </div>
-            <div id="strat-plan" class="p-5 space-y-5">
+            <div id="strat-plan" class="p-4 space-y-4 overflow-y-auto max-h-[320px] custom-scroll">
                 <div class="flex items-start space-x-3">
-                    <div class="mt-1 p-1 bg-blue-500/20 rounded border border-blue-500/30"><i data-lucide="trending-up" class="w-3 h-3 text-blue-400"></i></div>
-                    <div><p class="text-[10px] font-bold text-blue-400 uppercase tracking-tight">Closing</p><p id="strat-devcom" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
+                    <div class="mt-1 flex-shrink-0 p-1.5 bg-blue-500/20 rounded border border-blue-500/30"><i data-lucide="trending-up" class="w-3 h-3 text-blue-400"></i></div>
+                    <div>
+                        <p class="text-[10px] font-bold text-blue-400 uppercase tracking-tight">Closing Prioritaire</p>
+                        <p id="strat-devcom" class="text-[11px] text-slate-300 leading-snug mt-0.5">Calcul...</p>
+                        <p id="strat-closing1" class="text-[10px] text-slate-500 leading-snug mt-1 italic"></p>
+                    </div>
                 </div>
                 <div class="flex items-start space-x-3">
-                    <div class="mt-1 p-1 bg-emerald-500/20 rounded border border-emerald-500/30"><i data-lucide="target" class="w-3 h-3 text-emerald-400"></i></div>
-                    <div><p class="text-[10px] font-bold text-emerald-400 uppercase tracking-tight">Leads & Pipe</p><p id="strat-leads" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
+                    <div class="mt-1 flex-shrink-0 p-1.5 bg-emerald-500/20 rounded border border-emerald-500/30"><i data-lucide="target" class="w-3 h-3 text-emerald-400"></i></div>
+                    <div>
+                        <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-tight">Leads & Pipe</p>
+                        <p id="strat-leads" class="text-[11px] text-slate-300 leading-snug mt-0.5">Calcul...</p>
+                    </div>
                 </div>
                 <div class="flex items-start space-x-3">
-                    <div class="mt-1 p-1 bg-purple-500/20 rounded border border-purple-500/30"><i data-lucide="globe" class="w-3 h-3 text-purple-400"></i></div>
-                    <div><p class="text-[10px] font-bold text-purple-400 uppercase tracking-tight">Visibilité</p><p id="strat-vis" class="text-[11px] text-slate-400 italic leading-snug">Calcul...</p></div>
+                    <div class="mt-1 flex-shrink-0 p-1.5 bg-purple-500/20 rounded border border-purple-500/30"><i data-lucide="globe" class="w-3 h-3 text-purple-400"></i></div>
+                    <div>
+                        <p class="text-[10px] font-bold text-purple-400 uppercase tracking-tight">Visibilité & Marque</p>
+                        <p id="strat-vis" class="text-[11px] text-slate-300 leading-snug mt-0.5">Calcul...</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <div class="mt-1 flex-shrink-0 p-1.5 bg-orange-500/20 rounded border border-orange-500/30"><i data-lucide="user" class="w-3 h-3 text-orange-400"></i></div>
+                    <div>
+                        <p class="text-[10px] font-bold text-orange-400 uppercase tracking-tight">Top Commercial</p>
+                        <p id="ai-top-comm" class="text-[11px] text-slate-300 leading-snug mt-0.5">—</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -241,7 +278,18 @@
             activeBilan = type;
             document.getElementById('btn-hebdo').className = type === 'hebdo' ? 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all bg-blue-600 text-white shadow-lg' : 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-white';
             document.getElementById('btn-annuel').className = type === 'annuel' ? 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all bg-blue-600 text-white shadow-lg' : 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-white';
-            document.getElementById('bilan-content').innerHTML = `<p class="text-slate-300 italic">${aiReports[type]}</p>`;
+            const txt = aiReports[type] || '';
+            // Formater le texte : mettre en valeur les CHF et les %
+            const formatted = txt
+                .replace(/([0-9][0-9 ']*\s*CHF)/g, '<span class="text-cyan-300 font-bold font-mono">$1</span>')
+                .replace(/(\d+[\.,]?\d*\s*%)/g,    '<span class="text-emerald-400 font-bold">$1</span>')
+                .replace(/Signal\s*:/g,  '<br><span class="text-amber-400 font-semibold">📊 Signal :</span>')
+                .replace(/Action\s*:/g,  '<br><span class="text-blue-400 font-semibold">⚡ Action :</span>')
+                .replace(/YTD\s*/g,      '<span class="text-purple-300 font-semibold">YTD </span>')
+                .replace(/Pipe\s+/g,     '<span class="text-slate-300">Pipe </span>')
+                .replace(/Marge\s+/g,    '<span class="text-slate-300">Marge </span>');
+            document.getElementById('bilan-content').innerHTML = 
+                '<p class="text-[12px] text-slate-300 leading-relaxed">' + formatted + '</p>';
         }
 
         // ═══════════════════════════════════════════════════════
