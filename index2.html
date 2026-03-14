@@ -325,6 +325,23 @@
                 nouveaux: { ca:0, n:0 }, existants: { ca:0, n:0 }
             };
 
+
+                // ── Mapping noms commerciaux (codes courts → noms complets) ──
+                const COMM_NAMES = {
+                    'PERGOD':'Romain Pergod','Pergod':'Romain Pergod',
+                    'DUPUIS':'Dupuis','Dupuis':'Dupuis',
+                    'LOUVARD':'Didier Louvard','Louvard':'Didier Louvard',
+                    'LEDANOIS-L':'Ledanois','LEDANOIS':'Ledanois',
+                    'MEDDAH':'Meddah','FAGRET':'Fagret','FAGRET':'Fagret',
+                    'CORAZZOL':'Nicolas Corazzol','Corazzol':'Nicolas Corazzol',
+                    'GRIMALDI':'Grimaldi','Grimaldi':'Grimaldi',
+                    'PERRIN':'Perrin','Perrin':'Perrin',
+                    'MARET':'Lilou Maret',
+                    '899_BENOIT':'Benoit Rosset','899_GUEDOU':'Arnaud Guedou',
+                    '899_ROMAIN':'Romain Pergod','899_ARNAUD':'Arnaud Guedou',
+                    '899_NICO':'Nicolas Corazzol','899_LOUVAR':'Didier Louvard',
+                    '899_LILOU':'Lilou Maret','899_JORDAN':'Jordan Favre',
+                };
             rows.forEach(r => {
                 // Support deux formats : objet compact {i,dc,s,m...} ou CSV parsé {ID_Dossier,...}
                 const id       = r.i || r.ID_Dossier || '';
@@ -333,7 +350,8 @@
                 const montant  = parseFloat(r.m || r.Montant_HT || 0) || 0;
                 const marge    = parseFloat(r.mg || r.Marge_HT || 0) || 0;
                 const volume   = parseFloat(r.v || r.Volume_m3 || 0) || 0;
-                const comm     = r.c || r.Commercial || 'Inconnu';
+                const rawComm  = r.c || r.Commercial || 'Inconnu';
+                const comm     = COMM_NAMES[rawComm] || rawComm;
                 const dest     = (r.dp || r.Destination_Pays || 'CH').toUpperCase();
                 const typeC    = (r.tc || r.Type_Client || '').toLowerCase();
                 const dcStr    = r.dc || r.Date_Creation || '';
@@ -375,14 +393,17 @@
                     data.states['Annulés'] += montant;
                     data.stats.pertes += montant;
                 } else {
-                    data.stats.pipe += montant;
-                    data.comms[comm].pipe += montant;
-                    if (data.segs[segment]) data.segs[segment].pipe += montant;
+                    // Pipeline : cumuler toutes années pour le donut chart
                     if (statut.includes('devis')) data.states['Devis Envoyés'] += montant;
+                    else if (statut.includes('négociation') || statut.includes('negociation')) data.states['En Négociation'] += montant;
                     else data.states['En Négociation'] += montant;
-                    if (!isNaN(dCreate.getTime())) {
-                        if (dCreate.getFullYear() === CY) data.fore26[dCreate.getMonth()] += montant;
-                        if (dCreate >= sDays) data.wow.pipe += montant;
+                    // KPI pipeline = seulement l'année en cours (opérationnellement pertinent)
+                    if (isYTD) {
+                        data.stats.pipe += montant;
+                        data.comms[comm].pipe += montant;
+                        if (data.segs[segment]) data.segs[segment].pipe += montant;
+                        if (!isNaN(dCreate.getTime())) data.fore26[dCreate.getMonth()] += montant;
+                        if (!isNaN(dCreate.getTime()) && dCreate >= sDays) data.wow.pipe += montant;
                     }
                 }
             });
