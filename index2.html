@@ -329,12 +329,12 @@
                 // ── Mapping noms commerciaux (codes courts → noms complets) ──
                 const COMM_NAMES = {
                     'PERGOD':'Romain Pergod','Pergod':'Romain Pergod',
-                    'DUPUIS':'Dupuis','Dupuis':'Dupuis',
+                    'DUPUIS':'Quentin Dupuis','Dupuis':'Quentin Dupuis',
                     'LOUVARD':'Didier Louvard','Louvard':'Didier Louvard',
                     'LEDANOIS-L':'Ledanois','LEDANOIS':'Ledanois',
                     'MEDDAH':'Meddah','FAGRET':'Fagret','FAGRET':'Fagret',
                     'CORAZZOL':'Nicolas Corazzol','Corazzol':'Nicolas Corazzol',
-                    'GRIMALDI':'Grimaldi','Grimaldi':'Grimaldi',
+                    'GRIMALDI':'_EXCLU_','Grimaldi':'_EXCLU_',
                     'PERRIN':'Perrin','Perrin':'Perrin',
                     'MARET':'Lilou Maret',
                     '899_BENOIT':'Benoit Rosset','899_GUEDOU':'Arnaud Guedou',
@@ -617,7 +617,7 @@
             // Tableau équipe
             const commRows = Object.entries(data.comms)
                 .sort((a,b) => b[1].ca - a[1].ca)
-                .filter(([n]) => n && n !== 'Inconnu' && n.trim() !== '')
+                .filter(([n]) => n && n !== 'Inconnu' && n.trim() !== '' && n !== '_EXCLU_')
                 .map(([n, st]) => {
                     const winPct = st.total > 0 ? Math.round((st.win / st.total) * 100) : 0;
                     return `<tr class="border-b border-slate-800/50 hover:bg-slate-800/20">
