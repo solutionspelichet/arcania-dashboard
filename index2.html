@@ -467,12 +467,22 @@
                         const col    = (c,n,fb) => { const i=idx[n]; return i!==undefined?(c[i]||''):(c[fb]||''); };
                         const colNum = (c,n,fb) => { let s=col(c,n,fb).replace(/[' ]/g,'').replace(',','.').replace(/[^0-9.-]/g,''); return parseFloat(s)||0; };
 
+
+                        const VALID_S = new Set(['Gagné','gagné','Gagne','gagne','Clos','clos',
+                            'Devis Envoyé','devis envoyé','Devis envoye','devis envoye',
+                            'Annulé','annulé','Annule','annule',
+                            'Relancé','relancé','Relance','relance',
+                            'En Négociation','en négociation','En Negociation',
+                            'Inconnu','inconnu']);
                         const seen = new Set();
                         csvLines.slice(1).forEach(l => {
                             if(!l.trim()) return;
                             const c = parseCSVLine(l);
                             const id = col(c,'ID_Dossier',0);
                             if(!id || seen.has(id)) return;
+                            // Exclure les lignes avec statut invalide (dates ISO, codes G/Y/Z)
+                            const rawStatut = col(c,'Statut_Dossier',4);
+                            if(rawStatut && !VALID_S.has(rawStatut) && rawStatut.length < 30) return;
                             seen.add(id);
                             rows.push({
                                 i:id,
@@ -497,13 +507,8 @@
 
                         if (rows.length === 0) {
                             sheetStatus = 'empty';
-                        } else if (nbDoss > 500 || caTotal > 3000000) {
-                            // Sheet corrompu : trop de lignes ou CA impossible
-                            sheetStatus = 'corrupted';
-                            rows = []; // sheet corrompu → on affiche rien
-                            console.log('Sheet corrompu → données ignorées');
                         } else {
-                            console.log('Sheet valide — ' + nbDoss + ' dossiers, CA ' + Math.round(caTotal) + ' CHF');
+                            console.log('Sheet chargé — ' + nbDoss + ' dossiers, CA YTD ' + Math.round(caTotal) + ' CHF');
                         }
                     }
                 } catch(sheetErr) {
