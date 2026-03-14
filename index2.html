@@ -280,24 +280,23 @@
             document.getElementById('btn-annuel').className = type === 'annuel' ? 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all bg-blue-600 text-white shadow-lg' : 'px-4 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-500 hover:text-white';
             const txt = aiReports[type] || '';
             function fmtAI(t) {
+                if (!t || t === 'N/A' || t === 'En attente...') return '<span class="text-slate-500 italic text-[11px]">Analyse en cours...</span>';
                 return t
-                    .replace(/([0-9][0-9\s']*(?:CHF|%|m³|dossiers?))/g,
-                        '<span class="text-cyan-300 font-bold font-mono whitespace-nowrap">$1</span>')
-                    .replace(/Action\s*(?:immédiate)?\s*:/gi,
-                        '<br><span class="inline-flex items-center gap-1 text-blue-400 font-bold text-[10px] uppercase tracking-wide mt-2">⚡ Action</span><span class="text-blue-300"> : </span>')
-                    .replace(/Risque\s*#?\d*\s*[—-]/gi,
-                        '<span class="text-red-400 font-bold">⚠ Risque — </span>')
-                    .replace(/Priorité\s*/gi, '<span class="text-amber-400 font-semibold">Priorité </span>')
-                    .replace(/benchmark/gi,  '<span class="text-slate-400 italic">benchmark</span>')
-                    .replace(/\n/g, '<br>');
+                    .replace(/(\d[\d ]*[\d]\s*CHF)/g, '<span class="text-cyan-300 font-bold font-mono">$1</span>')
+                    .replace(/(\d+[.,]?\d*\s*%)/g, '<span class="text-emerald-400 font-bold">$1</span>')
+                    .replace(/(Nicolas Corazzol|Quentin Dupuis|Romain Pergod|Arnaud Guedou|Didier Louvard|Ledanois|Meddah|Benoit Rosset)/g, '<span class="text-white font-semibold">$1</span>')
+                    .replace(/Action\s*:/gi, '<br><span class="text-blue-400 font-bold text-[10px] uppercase mt-1 inline-block">&#x26A1; Action :</span> ')
+                    .replace(/Priorit[eé]\s*#?(\d+)?/gi, '<span class="text-amber-400 font-bold">&#127919; Priorit&eacute; $1</span>')
+                    .replace(/Risque\s*(critique)?/gi, '<span class="text-red-400 font-bold">&#9888; Risque $1</span>')
+                    .replace(/Objectif/gi, '<span class="text-purple-400 font-semibold">Objectif</span>')
+                    .replace(/benchmark/gi, '<span class="text-slate-400 italic">benchmark</span>')
+                    .replace(/([.!]) ([A-Z])/g, '$1<br><span class="text-slate-600 mr-1">&#9658;</span>$2');
             }
-            // Construire le contenu avec bannière corruption si applicable
-            let existing = document.getElementById('bilan-content').innerHTML;
-            const banner = existing.includes('corrompu') ? existing.match(/<div class="mb-3[^"]*"[^>]*>[\s\S]*?<\/div><\/div>/)?.[0] || '' : '';
-            document.getElementById('bilan-content').innerHTML = banner +
-                '<div class="space-y-1">' +
-                '<p class="text-[11px] text-slate-300 leading-relaxed">' + fmtAI(txt) + '</p>' +
-                '</div>';
+            const existing2 = document.getElementById('bilan-content').innerHTML;
+            const bannerMatch = existing2.match(/<div[^>]*mb-3[^>]*>[\s\S]*?<\/div><\/div>/);
+            const bannerHTML = bannerMatch ? bannerMatch[0] : '';
+            document.getElementById('bilan-content').innerHTML = bannerHTML +
+                '<div class="text-[11px] text-slate-300 leading-relaxed">' + fmtAI(txt) + '</div>';
         }
 
         // ═══════════════════════════════════════════════════════
