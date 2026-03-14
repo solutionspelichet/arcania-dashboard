@@ -373,13 +373,15 @@
                     if (yr === 2025 && !isNaN(dSig.getTime())) data.rev25[dSig.getMonth()] += montant;
                     if (yr === 2026 && !isNaN(dSig.getTime())) data.rev26[dSig.getMonth()] += montant;
                     data.states['Clos'] += montant;
-                    // Classement commerciaux toutes années
-                    data.comms[comm].ca    += montant;
-                    data.comms[comm].win   += 1;
-                    data.comms[comm].marge += marge;
-                    if (data.segs[segment]) { data.segs[segment].ca += montant; data.segs[segment].marge += marge; data.segs[segment].win++; }
-                    data.dests[dest] = (data.dests[dest]||0) + volume;
-                    // KPIs YTD uniquement
+                    // Charts historiques uniquement (rev25/rev26)
+                    // KPIs YTD uniquement — CA, marge, commerciaux, segments
+                    if (isYTD) {
+                        data.comms[comm].ca    += montant;
+                        data.comms[comm].win   += 1;
+                        data.comms[comm].marge += marge;
+                        if (data.segs[segment]) { data.segs[segment].ca += montant; data.segs[segment].marge += marge; data.segs[segment].win++; }
+                        data.dests[dest] = (data.dests[dest]||0) + volume;
+                    }
                     if (isYTD) {
                         data.stats.ca    += montant;
                         data.stats.win   += 1;
